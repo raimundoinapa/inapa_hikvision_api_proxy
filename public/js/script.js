@@ -1,7 +1,7 @@
 (async () => {
     const {app, q, create, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
     const apiServerProtocol = 'http';
-    const apiDomain = '127.0.0.1';
+    const apiDomain = '172.20.2.99';
     const port = '3000';
     const apiServerUrl = `${apiServerProtocol}://${apiDomain}${! port ? '' : ':' + port}`;
     const endpoints = {
@@ -284,7 +284,7 @@
             const camera = dataObj.filtered[i];
 
             if (! camera) { break; }
-    
+
             const isOnline = camera?.status && camera.status.toString() == '1';
             const isPTZ = camera?.capabilitySet && camera.capabilitySet.toLowerCase().includes('ptz');
             const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
@@ -337,6 +337,9 @@
                 <div class="camera-name-container">
                     <div class="camera-name protected-from-dark">${nameBadge}</div>
                 </div>
+                <div id="picture-error-msg-${camera.cameraIndexCode}" class="picture-error-container d-none">
+                    <div class="picture-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error en captura de imagen</div>
+                </div>
             `;
 
             if (camera?.capture?.length) { videoPlayerContainer.style.backgroundImage = `url(${camera.capture})`; }
@@ -349,7 +352,8 @@
             const btnCapure = q(`#capure-${camera.cameraIndexCode}`);
             const btnPtz = q(`#ptz-${camera.cameraIndexCode}`);
             const btnStreamSwitch = q(`#stream-switch-${camera.cameraIndexCode}`);
-    
+            const picErroMsg = q(`#picture-error-msg-${camera.cameraIndexCode}`);
+            
             const imBusy = () => {
                 videoPlayerWrapper.appendChild(preloader);
     
@@ -390,15 +394,7 @@
                 const camFromDB = await dbRequest._get('cameras', {index: 'cameraIndexCode', value: camera.cameraIndexCode});
     
                 if (! btnPlay.$el?.data?.isPlaying) {
-                    /* await new Promise((resolve) => {
-                        setTimeout(() => {
-                            resolve(true);
-                        }, 2000);
-                    }); */
-    
-                    if (camFromDB?.cameraIndexCode && camFromDB?.captureTimestamp && (timeStamp - camFromDB.captureTimestamp) < captureMinTimeBetweenUpdates) {
-                        showSnackbar(`Ya se tomó una foto de la cámara ${camera.cameraIndexCode} recientemente`, 'warning');
-                    } else {
+                    if (! camFromDB?.captureTimestamp || (timeStamp - camFromDB.captureTimestamp) > captureMinTimeBetweenUpdates) {
                         const capture = await runFetch(apiServerUrl + endpoints.protected.capture, {
                             method: 'POST',
                             headers: {
@@ -409,20 +405,19 @@
                         });
 
                         if (! capture?.data?.length || capture?.data?.code) {
+                            picErroMsg.className = '';
+                            
                             showSnackbar(`Error al tomar foto en la cámara ${camera.cameraIndexCode}`, 'warning');
                         } else {
-                            camera.captureTimestamp = timeStamp;
+                            camFromDB.capture = capture.data;
+                            camFromDB.captureTimestamp = timeStamp;
+                            dbRequest._put('cameras', camFromDB);
 
                             videoPlayerContainer.style.backgroundImage = `url(${capture.data})`;
-            
-                            if (camFromDB?.cameraIndexCode) {            
-                                camFromDB.capture = capture.data;
-                                camFromDB.captureTimestamp = timeStamp;
-                        
-                                dbRequest._put('cameras', camFromDB);
-                            }
 
-                            console.log('Foto remota tomada a', camera.cameraIndexCode, camera.captureTimestamp);
+                            picErroMsg.className = 'd-none';
+
+                            console.log('Foto remota tomada a', camera.cameraIndexCode, camFromDB.captureTimestamp);
                         }
                     }
                 } else {
@@ -435,18 +430,11 @@
                     
                     const dataUrl = canvas.toDataURL('image/png');
 
-                    camera.captureTimestamp = timeStamp;
+                    camFromDB.capture = dataUrl;
+                    camFromDB.captureTimestamp = timeStamp;
+                    dbRequest._put('cameras', camFromDB);
     
                     videoPlayerContainer.style.backgroundImage = `url(${dataUrl})`;
-    
-                    if (camFromDB?.cameraIndexCode) {
-                        console.log(camFromDB);
-    
-                        camFromDB.capture = dataUrl;
-                        camFromDB.captureTimestamp = timeStamp;
-                
-                        dbRequest._put('cameras', camFromDB);
-                    }
 
                     if (download) {
                         const link = create('a', {href: dataUrl, download: `${camera.cameraIndexCode}_capture_${timeStamp}.png`});
@@ -522,14 +510,14 @@
 
                             btnRefresh._remove();
 
-                            const camFromDB = await dbRequest._get('cameras', {index: 'cameraIndexCode', value: camera.cameraIndexCode});
-
                             if (camFromDB?.cameraIndexCode) {            
                                 camFromDB.status = '1';
                         
                                 dbRequest._put('cameras', camFromDB);
                             }
                         }
+
+                        takePicture();
     
                         console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
                     } catch(err) {
@@ -621,12 +609,12 @@
             
             if (isOnline && ! camera?.captureTimestamp) {
                 (async () => {
-                    console.log('Tomando foto remota a', camera.cameraIndexCode, camera.captureTimestamp);
+                    console.log('Tomando foto remota a', camera.cameraIndexCode);
 
                     await takePicture();
 
                     if (! camera?.captureTimestamp && ! videoPlayerObject.captureRetry) {
-                        console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode, camera.captureTimestamp);
+                        console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
 
                         takePicture();
 

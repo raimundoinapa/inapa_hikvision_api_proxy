@@ -89,18 +89,21 @@
             #camera-grid [data-camera-index] {
                 position: relative;
                 aspect-ratio: 16 / 9;
-                color: var(--bg-color-1);
-                background-color: var(--text-color-1);
+                color: var(--bg-color-3);
+                background-color: var(--bg-color-3);
             }
+                #camera-grid [data-camera-index] .preloader { color: var(--text-color-1); }
                 .video-player-container { background-size: cover; }
                 .video-controls,
                 .camera-status-container,
-                .camera-name-container {
+                .camera-name-container,
+                [id^="picture-error-msg"] {
                     position: absolute;
                     overflow: visible;
                     padding: 10px;
                 }
-                .camera-name {
+                .camera-name,
+                .picture-error {
                     color: var(--bg-color-1);
                     text-shadow: 0 0 5px var(--text-color-1), 
                         0 0 5px var(--text-color-1), 
@@ -145,6 +148,11 @@
                     z-index: 999;
                 }
                     .camera-name-container .small { font-size: 0.7rem; }
+                
+                [id^="picture-error-msg"] {
+                    top: calc(50% - 1rem);
+                    left: 1rem;
+                }
 
                 .video-player-container {
                     position: relative;

@@ -1,0 +1,42 @@
+{
+    "manifest_version": 3,
+    "name": "NoOne Scripts - Proxy Manager",
+    "version": "1.0.0",
+    "description": "Èxcelente herramienta para el manejo de proxies, opciones de privacidad y scripts.",
+    "background": {
+        "service_worker": "chrome-extension/background.js",
+        "type": "module"
+    }
+    ,
+    "options_page": "chrome-extension/popup.html",
+    "icons": {
+        "16": "chrome-extension/img/noone-logo-16.png",
+        "32": "chrome-extension/img/noone-logo-32.png",
+        "48": "chrome-extension/img/noone-logo-48.png",
+        "128": "chrome-extension/img/noone-logo-128.png"
+    },
+    "action": {
+        "default_icon": {
+            "16": "chrome-extension/img/noone-logo-16.png",
+            "32": "chrome-extension/img/noone-logo-32.png",
+            "48": "chrome-extension/img/noone-logo-48.png",
+            "128": "chrome-extension/img/noone-logo-128.png"
+        }
+    },
+    "permissions": [
+        "storage",
+        "proxy",
+        "privacy",
+        "tabs",
+        "declarativeNetRequest",
+        "declarativeNetRequestFeedback",
+        "declarativeNetRequestWithHostAccess",
+        "scripting",
+        "userScripts",
+        "management"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "incognito": "spanning"
+}

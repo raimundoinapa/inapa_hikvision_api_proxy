@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="title" content="INAPA - Sistema de Monitoreo">
+        <meta name="description" content="INAPA - Sistema de Monitoreo">
+        <meta name="keywords" content="INAPA - Sistema de Monitoreo">
+        <meta name="robots" content="index, follow">
+        <meta name="language" content="Spanish">
+        <meta name="author" content="Raimundo Araujo Correa">
+        
+        <!-- Vendor Files -->
+            <!-- CPLIb -->
+            <link href="./cp_lib_v0.2.0/css/helper.css" rel="stylesheet">
+            <script src="./cp_lib_v0.2.0/js/helper.js"></script>
+            <script src="./cp_lib_v0.2.0/js/custom-elements.js"></script>
+            <script src="./cp_lib_v0.2.0/js/web-components.js"></script>
+            <script src="./cp_lib_v0.2.0/js/indexeddb.js"></script>
+
+        <!-- JSPlugin Support -->
+            <script src="./jsplugin/jsPlugin-3.0.0.min.js"></script>
+            <!-- <script src="./jsplugin/jquery-1.12.1.min.js"></script>
+            <script src="./jsplugin/jquery.cookie.js"></script>
+            <script src="./jsplugin/cryptico.min.js"></script>
+            <script src="./jsplugin/uuid.js"></script> -->
+        
+        <style>
+            :root {
+                --gap: 10px;
+            }
+
+            .global-preloader {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: var(--bg-color-1);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+                .global-preloader::after {
+                    content: "";
+                    height: 40px;
+                    aspect-ratio: 1 / 1;
+                    border-width: 7px;
+                    border-style: solid;
+                    border-color: inherit;
+                    border-top-color: transparent;
+                    border-bottom-color: transparent;
+                    border-radius: 50%;
+                    animation: rotate 1s linear infinite;
+                }
+            
+            #logo {
+                margin: 0;
+                padding: 0;
+                top: 12px;
+                left: -120px;
+                position: absolute;
+                width: 110px;
+                aspect-ratio: 1 / 1;
+                background-image: url(./img/logo.png);
+            }
+
+            #status {
+                float: right;
+                display: flex;
+                gap: 0.5rem;
+            }
+                #status span {
+                    font-size: 0.8rem;
+                }
+
+            #camera-grid {
+                display: grid;
+                gap: var(--gap);
+                overflow: hidden;
+            }
+                .grid-4x4 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 3)) / 4), 1fr)); }
+                .grid-3x3 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 2)) / 3), 1fr)); }
+                .grid-2x2 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 1)) / 2), 1fr)); }
+                .grid-1x1 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 0)) / 1), 1fr)); }
+
+            #camera-grid [data-camera-index] {
+                position: relative;
+                aspect-ratio: 16 / 9;
+                color: var(--bg-color-1);
+                background-color: var(--text-color-1);
+            }
+                .video-player-container { background-size: cover; }
+                .video-controls,
+                .camera-status-container,
+                .camera-name-container {
+                    position: absolute;
+                    overflow: visible;
+                    padding: 10px;
+                }
+                .camera-name {
+                    color: var(--bg-color-1);
+                    text-shadow: 0 0 5px var(--text-color-1), 
+                        0 0 5px var(--text-color-1), 
+                        0 0 5px var(--text-color-1);
+                }
+                
+                [id^="refresh"] {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 1000;
+                    opacity: 0;
+                }
+                    [id^="refresh"]:hover { opacity: 1; }
+
+                .video-controls {
+                    bottom: 0;
+                    left: 0;
+                    z-index: 1000;
+                    opacity: 0;
+                }
+                    .video-controls:hover { opacity: 1; }
+                    .video-controls .buttons {
+                        position: relative;
+                        display: flex;
+                        gap: 1rem;
+                    }
+
+                .camera-status-container {
+                    bottom: 0;
+                    right: 0;
+                    display: flex;
+                    justify-content: flex-end;
+                    z-index: 999;
+                }
+
+                .camera-name-container {
+                    top: 0;
+                    left: 0;
+                    display: flex;
+                    justify-content: flex-end;
+                    z-index: 999;
+                }
+                    .camera-name-container .small { font-size: 0.7rem; }
+
+                .video-player-container {
+                    position: relative;
+                    height: 100%;
+                }
+                    .video-player-container [id^="video-player"] {
+                        width: 100% !important;
+                        height: 100% !important;
+                        border: none !important;
+                    }
+
+            @media screen and (max-width: 1120px) {
+                #tools-form { flex-direction: column; }
+            }
+
+            #camera-grid-wrapper:-webkit-full-screen {
+                --max-width: 1536px;/*Resolución 1920x1080 con un Scale de 125%*/
+                --padding: 0px;
+                --gap: 0px;
+            }
+                #camera-grid-wrapper:-webkit-full-screen .video-player-container {
+                    border: 1px solid rgba(255, 255, 255, .5);
+                }
+
+            #camera-grid-wrapper:-moz-full-screen {
+                --max-width: 1536px;
+                --padding: 0px;
+                --gap: 0px;
+            }
+                #camera-grid-wrapper:-moz-full-screen .video-player-container {
+                    border: 1px solid rgba(255, 255, 255, .5);
+                }
+
+            #camera-grid-wrapper:-ms-full-screen {
+                --max-width: 1536px;
+                --padding: 0px;
+                --gap: 0px;
+            }
+                #camera-grid-wrapper:-ms-full-screen .video-player-container {
+                    border: 1px solid rgba(255, 255, 255, .5);
+                }
+        </style>
+
+        <title>INAPA - Sistema de Monitoreo</title>
+    </head>
+    <body>
+        <div class="global-preloader"></div>
+        <main>
+            <div class="container">
+                <h1 id="logo"><span class="d-none">INAPA - Sistema de Monitoreo</span></h1>
+
+                <div id="status">
+                    <div><a-badge success circle id='online-badge'>12</a-badge> <span>Online</span></div>
+                    <div><a-badge danger circle id='offline-badge'>2</a-badge> <span>Offline</span></div>
+                    <div><a-badge info circle id='total-badge'>12</a-badge> <span>Total</span></div>
+                    <div><dark-mode-toggler icon-size="1.5em"></dark-mode-toggler></div>
+                </div>
+
+                <form action="/test" method="post" id="tools-form" is="super-form" novalidate="" class="d-flex items-center gap0-5 mt1 mb1">
+                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                        <div class="form-row mb0">
+                            <div class="d-flex gap0-5">
+                                <div><!-- Lupa -->
+                                    <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>0 -->
+                                    <input type="text" name="search" placeholder="Buscar (Keywords separados por ,)" title="Buscar (Keywords separados por ,)" style="width: 280px;">
+                                    <label class="label-placeholder">Buscar (Keywords separados por ,)</label></div>
+                                <div><a-button info type="submit" name="search-button"><an-icon search size="1.2em"></an-icon></a-button></div>
+                            </div>
+                        </div>
+                        <!-- <div><a-button info><an-icon grid size="1.2em"></an-icon></a-button></div>
+                        <div><a-button info>᎒᎒᎒</a-button></div>
+                        <div><a-button info>⋮⋮⋮</a-button></div> -->
+                    </div>
+                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                        <div class="form-row mb0">
+                            <select name="status-select"></select>
+                            <label class="label-placeholder">Status</label>
+                        </div>
+                        <div class="o-visible" style="width: 41px; height: 40px;">
+                            <a-button info aria-label="Filtro" aria-controls="filters-dialog" data-filter-set="false">
+                                <style>
+                                    :host([data-filter-set="false"]) span { display: none; }
+                                </style>
+                                <an-icon filter size="1.2em"></an-icon>
+                                <span class="p-absolute h5" style="color: var(--danger-1)">*</span>
+                            </a-button>
+                        </div>
+                        <!-- <div><a-button id="btn-custom-view" info aria-label="Custom view" style="width: 41px; height: 40px;">᎒᎒᎒</a-button></div> -->
+                        <div class="form-row mb0">
+                            <select name="sort-select"></select>
+                            <label class="label-placeholder">Ordenar por</label>
+                        </div>
+                    </div>
+                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                        <div class="form-row mb0">
+                            <select name="grid-size-select">
+                            </select>
+                            <label class="label-placeholder">Tamaño</label>
+                        </div>
+                        <div><a-button id="btn-start-all" success>▶ Iniciar todo</a-button></div>
+                        <div><a-button id="btn-stop-all" danger>⏹ Detener todo</a-button></div>
+                        <div><a-button id="btn-fullscreen-all" warning><an-icon full-screen></an-icon></a-button></div>                        
+                        <div><a-button id="btn-refresh-all" info aria-label="Refresh"><an-icon refresh size="1.2em"></an-icon></a-button></div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="camera-grid-wrapper">
+                <div class="container">
+                    <div id="camera-grid" class="grid-4x4"></div>
+                </div>
+            </div>
+            
+            <div class="container mt1">
+                <div id="pagination"></div>
+            </div>
+        </main>
+
+        <a-dialog id="filters-dialog" menu class="protected-from-dark" transition='swipe-down' width="400px">
+            <style>
+                :where([is="super-form"]) fieldset {
+                    padding: 5px;
+                    margin-bottom: 10px;
+                    border: none;
+                    border-radius: 0;
+                    font-size: 0.85rem;
+                }
+                :where([is="super-form"]) > div > fieldset { flex: 1;}
+                :where([is="super-form"]) fieldset legend {
+                    padding: 0;
+                    margin-bottom: 0;
+                    font-size: 0.85rem;
+                }
+                :where([is="super-form"]) .form-row {
+                    max-height: 150px;
+                    padding: 10px;
+                    border-radius: 5px;
+                    overflow-y: auto;
+                    background-color: var(--white-smoke);
+                }
+                :where([is="super-form"]) .form-row > div {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                :where([is="super-form"]) .form-row:not(.mb0) {
+                    margin-bottom: 5px;
+                }
+                legend > div { float: right; }
+            </style>
+
+            <form action="#" method="post" data-bind="filters-form" is="super-form" novalidate="" class="mb0" id="filters-form">
+                <fieldset>
+                    <legend class="w100">Capabilities <a-badge info data-bind="capabilities-count">0</a-badge> <div>Selected <a-badge success data-bind="capabilities-selected-count">0</a-badge></div></legend>
+                    <div class="form-row" data-bind="capabilities-container"></div>
+                </fieldset>
+                
+                <fieldset>
+                    <legend class="w100">Devices <a-badge info data-bind="devices-count">0</a-badge> <div>Selected <a-badge success data-bind="devices-selected-count">0</a-badge></div></legend>
+                    <div class="form-row" data-bind="devices-container"></div>
+                </fieldset>
+                
+                <fieldset>
+                    <legend class="w100">Areas <a-badge info data-bind="areas-count">0</a-badge> <div>Selected <a-badge success data-bind="areas-selected-count">0</a-badge></div></legend>
+                    <div class="form-row" data-bind="areas-container"></div>
+                </fieldset>
+
+                <fieldset>
+                    <div class="form-row" data-bind="buttons-container">
+                        <a-button name="reset" aria-label="Limpiar">Limpiar</a-button> <a-button success type="submit" name="save" aria-label="Guardar"><an-icon save></an-icon> Save</a-button>
+                    </div>
+                </fieldset>
+            </form>
+        </a-dialog>
+    </body>
+    <script src="./js/script.js"></script>
+</html>

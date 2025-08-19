@@ -1,0 +1,756 @@
+<script>window.startTest = performance.now();</script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="title" content="CPLib Helper v0.1.1">
+    <meta name="description" content="CPLib Helper v0.1.1">
+	<meta name="keywords" content="elementos personalizados, componentes web, librería componentes web y elementos personalizados, ui, ux, dialog, modal, snackbar, toast, popup, tooltip, menú, accordion, menu desplegable, botón hamburger, botón modo escuro, slide, slideshow">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Spanish">
+    <meta name="author" content="Raimundo Araujo from https://rcsoft.club">
+    <!-- <meta name="color-scheme" content="light"> -->
+    <!-- <meta name="client-token" data-csrf-token="true" content=""> -->  
+    <!-- <meta name='apple-mobile-web-app-capable' content='yes'/>
+    <meta name='mobile-web-app-capable' content='yes'/>
+    <meta name="msapplication-TileColor" content="#2b5797">
+    <meta name="theme-color" content="#949135"> -->
+
+    <!-- <link rel="manifest" href="./site.webmanifest"> -->
+
+    <!-- Vendor Files -->
+        <!-- CPLIb -->
+    <link href="css/helper.css" rel="stylesheet">
+    <script src="js/helper.js"></script>
+    <script src="js/indexeddb.js"></script>
+    <script src="js/custom-elements.js"></script>
+    <script src="js/web-components.js"></script>
+
+    <title>CPLib Helper v0.1.1</title>
+</head>
+<style>
+    section {
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--text-color-3);
+    }
+
+    .alert {
+        --bgcd: var(--neutral-dark);
+        --bgclr: var(--neutral-lighter);
+    }
+        .alert.info {
+            --bgcd: var(--info-dark);
+            --bgclr: var(--info-lighter);
+        }
+        .alert.success {
+            --bgcd: var(--success-dark);
+            --bgclr: var(--success-lighter);
+        }
+        .alert.warning {
+            --bgcd: var(--warning-dark);
+            --bgclr: var(--warning-lighter);
+        }
+        .alert.danger {
+            --bgcd: var(--danger-dark);
+            --bgclr: var(--danger-lighter);
+        }
+        .alert.accent {
+            --bgcd: var(--accent-dark);
+            --bgclr: var(--accent-lighter);
+        }
+    .alert {
+        padding: 1em;
+        color: var(--black-pearl);
+        border-left: 3px solid var(--bgcd);
+        background-color: var(--bgclr);
+        display: inline-flex;
+        gap: 1rem;
+    }
+    .alert .icon {
+        font-size: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .test-square  div {
+        width: 2rem;
+        aspect-ratio: 1 / 1;
+    }
+    
+    hr {
+        width: 80%;
+        height: 4px;
+        margin: 1rem auto;
+        text-align: center;
+        background-color: var(--bg-color-3);
+        border: none;
+    }
+
+    
+    table { margin: 0 auto; }
+    table th {
+        padding: 0.3rem 0.5rem;
+        color: var(--text-color-2);
+        background-color: var(--yellow-light);
+    }
+    table td { padding: 0.2rem 0.4rem; }
+    table tr:nth-child(odd) { background-color: var(--grey-lighter); }
+    table tr:nth-child(even) { background-color: var(--blue-lighter); }
+    table tfoot td { text-align: center; }
+</style>
+<body>
+    <div class="container">
+        <a class="skip-link" href="#main-content">Skip to content</a>        
+        <main id="main-content">
+            <section id="text-and-backgrounds">
+                <div class="d-flex gap1">
+                    <h1>UI Elements |</h1>
+                    <h1 style="color: var(--text-color-2);">UI Elements |</h1>
+                    <h1 style="color: var(--text-color-3);">UI Elements</h1>
+                </div>
+                <div class="p1" style="background-color: var(--bg-color-2);">
+                    <div class="d-flex gap1">
+                        <h1>UI Elements |</h1>
+                        <h1 style="color: var(--text-color-2);">UI Elements |</h1>
+                        <h1 style="color: var(--text-color-3);">UI Elements</h1>
+                    </div>
+                    <div class="p1" style="background-color: var(--bg-color-3);">
+                        <div class="d-flex gap1">
+                            <h1>UI Elements |</h1>
+                            <h1 style="color: var(--text-color-2);">UI Elements |</h1>
+                            <h1 style="color: var(--text-color-3);">UI Elements</h1>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="buttons-section">
+                <h2>Buttons and Links</h2>
+                <p>&lt;a&gt; | &lt;button class="anchor-styled"&gt; | &lt;a-hamburger&gt; | &lt;dark-mode-toggler&gt; | &lt;button&gt; | &lt;a-button&gt;</p>
+                An anchor <a href="#test">element</a> |  A button with class <button type="button" class="anchor-styled"><span>anchor-styled</span></button>
+                <a-hamburger size="1.5em"></a-hamburger>
+                <dark-mode-toggler icon-size="1.5em">Dark / Light Mode</dark-mode-toggler>
+                <button is="dialog-button" aria-controls="login-form-modal">
+                    <span aria-hidden="true">Iniciar Sesión</span>
+                </button>
+                <br>
+                <br>
+                <a disabled href="#test">An anchor element</a>
+                <button disabled type="button" class="anchor-styled"><span>button.anchor-styled</span></button>
+                <a-hamburger size="1.5em" disabled></a-hamburger>
+                <dark-mode-toggler icon-size="1.5em" disabled>Dark / Light Mode</dark-mode-toggler>
+                <button disabled is="dialog-button" aria-controls="login-form-modal">
+                    <span aria-hidden="true">Iniciar Sesión</span>
+                </button>
+                <br>
+                <br>
+                <br>
+                <h5>&lt;a-button&gt;&lt;/a-button&gt;</h5>
+                <p>pill | circle | link | outline | transparent | icon | info | success | warning | danger | accent | wave</p>
+                <a-button>a-button</a-button>
+                <a-button pill wave>a-button</a-button>
+                <a-button circle>a-button</a-button>
+                <a-button link>a-button</a-button>
+                <a-button outline>a-button</a-button>
+                <a-button outline pill wave><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button outline circle>a-button</a-button>
+                <a-button transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button info>a-button</a-button>
+                <a-button info pill>a-button</a-button>
+                <a-button info circle>a-button</a-button>
+                <a-button info link wave>a-button</a-button>
+                <a-button info outline>a-button</a-button>
+                <a-button info outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button info outline circle>a-button</a-button>
+                <a-button info transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button info icon><an-icon info-circle></an-icon></a-button>
+                <a-button info icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button info icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button info icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button info icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button success>a-button</a-button>
+                <a-button success pill>a-button</a-button>
+                <a-button success circle>a-button</a-button>
+                <a-button success link wave>a-button</a-button>
+                <a-button success outline>a-button</a-button>
+                <a-button success outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button success outline circle>a-button</a-button>
+                <a-button success transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button success icon><an-icon info-circle></an-icon></a-button>
+                <a-button success icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button success icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button success icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button success icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>                
+                <a-button warning>a-button</a-button>
+                <a-button warning pill>a-button</a-button>
+                <a-button warning circle>a-button</a-button>
+                <a-button warning link wave>a-button</a-button>
+                <a-button warning outline>a-button</a-button>
+                <a-button warning outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button warning outline circle>a-button</a-button>
+                <a-button warning transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button warning icon><an-icon info-circle></an-icon></a-button>
+                <a-button warning icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button warning icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button warning icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button warning icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button danger>a-button</a-button>
+                <a-button danger pill>a-button</a-button>
+                <a-button danger circle>a-button</a-button>
+                <a-button danger link wave>a-button</a-button>
+                <a-button danger outline>a-button</a-button>
+                <a-button danger outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button danger outline circle>a-button</a-button>
+                <a-button danger transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button danger icon><an-icon info-circle></an-icon></a-button>
+                <a-button danger icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button danger icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button danger icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button danger icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button accent>a-button</a-button>
+                <a-button accent pill>a-button</a-button>
+                <a-button accent circle>a-button</a-button>
+                <a-button accent link wave>a-button</a-button>
+                <a-button accent outline>a-button</a-button>
+                <a-button accent outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button accent outline circle>a-button</a-button>
+                <a-button accent transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button accent accent icon><an-icon info-circle></an-icon></a-button>
+                <a-button accent icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button accent icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button accent icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button accent icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button disabled>a-button</a-button>
+                <a-button disabled pill>a-button</a-button>
+                <a-button disabled circle>a-button</a-button>
+                <a-button disabled link wave>a-button</a-button>
+                <a-button disabled outline>a-button</a-button>
+                <a-button disabled outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled outline circle>a-button</a-button>
+                <a-button disabled transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button disabled info>a-button</a-button>
+                <a-button disabled info pill>a-button</a-button>
+                <a-button disabled info circle>a-button</a-button>
+                <a-button disabled info link wave>a-button</a-button>
+                <a-button disabled info outline>a-button</a-button>
+                <a-button disabled info outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled info outline circle>a-button</a-button>
+                <a-button disabled info transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled info icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled info icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled info icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled info icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled info icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button disabled success>a-button</a-button>
+                <a-button disabled success pill>a-button</a-button>
+                <a-button disabled success circle>a-button</a-button>
+                <a-button disabled success link wave>a-button</a-button>
+                <a-button disabled success outline>a-button</a-button>
+                <a-button disabled success outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled success outline circle>a-button</a-button>
+                <a-button disabled success transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled success icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled success icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled success icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled success icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled success icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>                
+                <a-button disabled warning>a-button</a-button>
+                <a-button disabled warning pill>a-button</a-button>
+                <a-button disabled warning circle>a-button</a-button>
+                <a-button disabled warning link wave>a-button</a-button>
+                <a-button disabled warning outline>a-button</a-button>
+                <a-button disabled warning outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled warning outline circle>a-button</a-button>
+                <a-button disabled warning transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled warning icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled warning icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled warning icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled warning icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled warning icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button disabled danger>a-button</a-button>
+                <a-button disabled danger pill>a-button</a-button>
+                <a-button disabled danger circle>a-button</a-button>
+                <a-button disabled danger link wave>a-button</a-button>
+                <a-button disabled danger outline>a-button</a-button>
+                <a-button disabled danger outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled danger outline circle>a-button</a-button>
+                <a-button disabled danger transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled danger icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled danger icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled danger icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled danger icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled danger icon circle><an-icon mic></an-icon></a-button></span>
+                <br>
+                <br>
+                <a-button disabled accent>a-button</a-button>
+                <a-button disabled accent pill>a-button</a-button>
+                <a-button disabled accent circle>a-button</a-button>
+                <a-button disabled accent link wave>a-button</a-button>
+                <a-button disabled accent outline>a-button</a-button>
+                <a-button disabled accent outline pill><an-icon info-circle></an-icon> A-button</a-button>
+                <a-button disabled accent outline circle>a-button</a-button>
+                <a-button disabled accent transparent circle icon wave><an-icon info-circle></an-icon></a-button>
+                <a-button disabled accent accent icon><an-icon info-circle></an-icon></a-button>
+                <a-button disabled accent icon circle><an-icon info-circle-filled></an-icon></a-button>
+                <a-button disabled accent icon circle><an-icon plus-u></an-icon></a-button>
+                <a-button disabled accent icon circle><an-icon x></an-icon></a-button>
+                <span style="font-size: 12px"><a-button disabled accent icon circle><an-icon mic></an-icon></a-button></span>
+            </section>
+
+            <section id="badges-section">
+                <h2 class="h4">Badges</h2>
+                <p>Badges are used to draw attention and display statuses or counts.</p>
+                <p>Por defecto los badges tienen bordes redondeados y se adaptan al tamaño del contenido</p>
+                <div class="mb1">
+                    <a-badge>1</a-badge>
+                    <a-badge info>2</a-badge>
+                    <a-badge success>3</a-badge>
+                    <a-badge warning>4</a-badge>
+                    <a-badge danger>5</a-badge>
+                    <a-badge>Neutral</a-badge>
+                    <a-badge info>Information</a-badge>
+                    <a-badge success>Success</a-badge>
+                    <a-badge warning>Warning</a-badge>
+                    <a-badge danger>Danger</a-badge>
+                    <a-badge accent>Accent</a-badge>
+                </div>
+                <div class="d-flex gap1">
+                    <div>
+                        <h3 class="h5">Propiedades rectangle y circle</h3>
+                        <div class="mb2">
+                            <p>La propiedad rectangle elimina el borde redondeado</p>
+                            <a-badge rectangle neutral>1</a-badge>
+                            <a-badge rectangle info>2</a-badge>
+                            <a-badge rectangle success>3</a-badge>
+                            <a-badge rectangle warning>4</a-badge>
+                            <a-badge rectangle danger>5555</a-badge>
+                            <br>
+                            <br>
+                            <p>La propiedad circle mantiene el badge dentro de un un aspect-ratio de 1 / 1</p>
+                            <a-badge circle neutral>1</a-badge>
+                            <a-badge circle info>2</a-badge>
+                            <a-badge circle success>3</a-badge>
+                            <a-badge circle warning>4</a-badge>
+                            <a-badge circle danger>5555</a-badge>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="h5">Clase pulse para-badges pulsantes</h3>
+                        <p>Animación que puedes usar para llamar la atención.</p>
+                        <div class="d-flex items-center gap1">
+                            <a-badge pulse>1</a-badge>
+                            <a-badge info pulse>2</a-badge>
+                            <a-badge success pulse>3</a-badge>
+                            <a-badge warning pulse>4</a-badge>
+                            <a-badge pulse danger>55555</a-badge>
+                            <a-badge radius0 pulse danger>55555</a-badge>
+                            <a-badge circle pulse danger>55555</a-badge>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="alerts-section">
+                <h2 class="h4">Alerts</h2>
+                <p>Alerts are used to display important messages inline or as toast notifications.</p>
+                <span class="alert">
+                    <div class="icon d-flex-center"><an-icon info-circle></an-icon></div>
+                    <div class="content">
+                        <strong>Explicabo itaque asperiores nobis hic</strong><br>
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Impedit nulla assumenda similique ea saepe illo magnam nemo.
+                    </div>
+                </span>
+                <br><br>
+                <span class="alert info">
+                    <div class="icon d-flex-center"><an-icon info-circle></an-icon></div>
+                    <div class="content">
+                        <strong>Explicabo itaque asperiores nobis hic</strong><br>
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Impedit nulla assumenda similique ea saepe illo magnam nemo.
+                    </div>
+                </span>
+                <br><br>
+                <span class="alert success">
+                    <div class="icon d-flex-center"><an-icon info-circle></an-icon></div>
+                    <div class="content">
+                        <strong>Explicabo itaque asperiores nobis hic</strong><br>
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Impedit nulla assumenda similique ea saepe illo magnam nemo.
+                    </div>
+                </span>
+                <br><br>
+                <span class="alert warning">
+                    <div class="icon d-flex-center"><an-icon info-circle></an-icon></div>
+                    <div class="content">
+                        <strong>Explicabo itaque asperiores nobis hic</strong><br>
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Impedit nulla assumenda similique ea saepe illo magnam nemo.
+                    </div>
+                </span>
+                <br><br>
+                <span class="alert danger">
+                    <div class="icon d-flex-center"><an-icon info-circle></an-icon></div>
+                    <div class="content">
+                        <strong>Explicabo itaque asperiores nobis hic</strong><br>
+                        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Impedit nulla assumenda similique ea saepe illo magnam nemo.
+                    </div>
+                </span>
+            </section>
+
+            <h2>Icons</h2>
+            <div style="font-size: 1.5rem;">
+                <h4>Icons</h4>
+                <an-icon minus-u></an-icon>
+				<an-icon plus-u></an-icon>
+				<an-icon x-u></an-icon>
+				<an-icon x-alt-u></an-icon>
+				<an-icon plus-alt-u></an-icon>
+				<an-icon chevron-left-u></an-icon>
+				<an-icon chevron-right-u></an-icon>
+				<an-icon check-u></an-icon>
+				<an-icon check-alt-u></an-icon>
+				<an-icon play-u></an-icon>
+				<an-icon refresh-u></an-icon>
+				<an-icon settings-u></an-icon>
+				<an-icon warning-u></an-icon>
+				<an-icon clock-u></an-icon>
+				<an-icon pause-u></an-icon>
+				<an-icon x></an-icon>
+				<an-icon plus></an-icon>
+				<an-icon minus></an-icon>
+				<an-icon plus-circle></an-icon>
+				<an-icon x-circle></an-icon>
+				<an-icon minus-circle></an-icon>
+				<an-icon edit-circle></an-icon>
+				<an-icon info-circle></an-icon>
+				<an-icon plus-full-screen></an-icon>
+				<an-icon edit-full-screen></an-icon>
+				<an-icon avatar></an-icon>
+				<an-icon back-arrow></an-icon>
+				<an-icon arrow-down-left></an-icon>
+				<an-icon arrow-up-right></an-icon>
+				<an-icon blocked></an-icon>
+				<an-icon chat></an-icon>
+				<an-icon check></an-icon>
+				<an-icon chevron-left></an-icon>                
+				<an-icon chevron-right></an-icon>
+				<an-icon clip></an-icon>
+				<an-icon clock></an-icon>
+				<an-icon download></an-icon>
+				<an-icon upload></an-icon>
+				<an-icon forward></an-icon>
+				<an-icon history></an-icon>
+				<an-icon mic></an-icon>
+				<an-icon mic-off></an-icon>
+				<an-icon play></an-icon>
+				<an-icon pause></an-icon>
+				<an-icon search></an-icon>
+				<an-icon smiley></an-icon>
+				<an-icon sort-a-z></an-icon>
+				<an-icon sort-z-a></an-icon>
+				<an-icon star></an-icon>
+				<an-icon store></an-icon>
+				<an-icon thumbs-down></an-icon>
+				<an-icon thumbs-up></an-icon>
+				<an-icon three-dots></an-icon>
+				<an-icon undo></an-icon>
+				<an-icon redo></an-icon>
+				<an-icon excel></an-icon>
+				<an-icon refresh></an-icon>
+				<an-icon save></an-icon>
+				<an-icon speaker></an-icon>
+				<an-icon delete-filled></an-icon>
+				<an-icon info-circle-filled></an-icon>
+				<an-icon info-square-filled></an-icon>
+				<an-icon eye-open></an-icon>
+				<an-icon eye-closed></an-icon>
+				<an-icon message></an-icon>
+				<an-icon phone></an-icon>
+				<an-icon phone-outgoing></an-icon>
+				<an-icon phone-incoming></an-icon>
+				<an-icon wireless-signal></an-icon>
+				<an-icon cog></an-icon>
+				<an-icon user-add></an-icon>
+				<an-icon bot></an-icon>
+				<an-icon stop></an-icon>
+				<an-icon spytransfer></an-icon>
+				<an-icon attendedtransfer></an-icon>
+				<an-icon callbot></an-icon>
+				<an-icon audio-file></an-icon>
+            </div>
+
+            <section id="headings-section">
+                <h2 class="h4">Headings</h2>
+                <h1>Heading 1</h1>
+                <h2>Heading 2</h2>
+                <h3>Heading 3</h3>
+                <h4>Heading 4</h4>
+                <h5>Heading 5</h5>
+                <h6>Heading 6</h6>
+            </section>
+            
+            <section id="text-blocks-section">
+                <h2 class="h4">Text Blocks</h2>
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing <a href="#" title="elit">elit</a>. Accusantium quae aliquam dolorem libero voluptates, unde quia aut iure molestiae dignissimos neque blanditiis distinctio magnam, veritatis ipsam animi quos dolor labore?</p>
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing <a href="#" title="elit">elit</a>. Accusantium quae aliquam dolorem libero voluptates, unde quia aut iure molestiae dignissimos neque blanditiis distinctio magnam, veritatis ipsam animi quos dolor labore?</p>
+                <p><!-- <img src="https://random.imagecdn.app/350/150"> --> Lorem ipsum, dolor sit amet consectetur adipisicing <a href="#" title="elit">elit</a>. Accusantium quae aliquam dolorem libero voluptates, unde quia aut iure molestiae dignissimos neque blanditiis distinctio magnam, veritatis ipsam animi quos dolor labore?</p>
+                <hr>
+                <small>Lorem ipsum, dolor sit amet consectetur adipisicing <a href="#" title="elit">elit</a>. Accusantium quae aliquam dolorem libero voluptates, unde quia aut iure molestiae dignissimos neque blanditiis distinctio magnam, veritatis ipsam animi quos dolor labore?</small>
+            </section>
+
+            <section id="lists_tabular-data-section">
+                <h2 class="h4">Lists and Tabular Data</h2>
+                <ul>
+                    <li>Lorem ipsum, dolor sit amet</li>
+                    <li>Veritatis ipsam animi quos dolor labore</li>
+                    <li>Accusantium quae aliquam dolorem libero</li>
+                    <li>Molestiae dignissimos neque blanditiis distinctio</li>
+                    <li>Dolor sit amet consectetur adipisicing</li>
+                </ul>
+                <hr>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Lorem</th>
+                            <th>Veritatis</th>
+                            <th>Accusantium</th>
+                            <th>Molestiae</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Dolor sit amet</td>
+                            <td>Neque blanditiis distinctio</td>
+                            <td>Consectetur adipisicing</td>
+                            <td>Quae aliquam dolorem</td>
+                        </tr>
+                        <tr>
+                            <td>Dolor sit amet</td>
+                            <td>Neque blanditiis distinctio</td>
+                            <td>Consectetur adipisicing</td>
+                            <td>Quae aliquam dolorem</td>
+                        </tr>
+                        <tr>
+                            <td>Dolor sit amet</td>
+                            <td>Neque blanditiis distinctio</td>
+                            <td>Consectetur adipisicing</td>
+                            <td>Quae aliquam dolorem</td>
+                        </tr>
+                        <tr>
+                            <td>Dolor sit amet</td>
+                            <td>Neque blanditiis distinctio</td>
+                            <td>Consectetur adipisicing</td>
+                            <td>Quae aliquam dolorem</td>
+                        </tr>
+                    </tbody>
+                    <tfoot><td colspan="4">Aliquam dolorem libero voluptates</td></tfoot>
+                </table>
+            </section>
+
+            <section id="forms-section">
+                <form action="/test" method="post" id="test-form" is="super-form">
+                    <fieldset>
+                        <a-hamburger></a-hamburger>
+                        <a-button><an-icon x></an-icon></a-button>
+                        <dark-mode-toggler></dark-mode-toggler>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Login</legend>
+                        <div class="form-row">
+                            <input type="text" name="emailOrPhone" autocomplete="username" autocapitalize="off" placeholder="Email ó teléfono" title="Introduzca un correo o número de teléfono válido" pattern="^(\w+(([\-+_]*\w)|([\-+_\w]*\.[\-+_]*\w))*@[\wñÑ]+[\-+_\w]*(\.\w+)*\.\w+)|(\+?\d{9,15})$">
+                            <label for="emailOrPhone" class="label-placeholder">Email ó teléfono</label>
+                        </div>
+                        <div class="form-row">
+                            <input type="password" name="password" placeholder="Password" autocomplete="password" spellcheck="false" title="Debe contener letras mayúsculas y minúsculas, números y caractereres especiales #?!@$%^&*.,;:`'_-~+=<>[](){}|/\ y contener entre 8 y 32 caracteres">
+                            <label for="password" class="label-placeholder">Password</label>
+                        </div>
+                        <div class="form-row">
+                            <select name="select">
+                                <option value="">Seleccione</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                            <label for="select" class="label-placeholder">Select</label>
+                        </div>
+                        <div class="form-row">
+                            <select name="selectMultiple" size="4" multiple>
+                                <option value="volvo">Volvo</option>
+                                <option value="saab">Saab</option>
+                                <option value="fiat">Fiat</option>
+                                <option value="audi">Audi</option>
+                            </select>
+                            <label for="selectMultiple" class="label-placeholder">Select multiple</label>
+                        </div>
+                        <div class="form-row">
+                            <select name="selectAlt">
+                                <optgroup label="fruits">
+                                    <option>Banana</option>
+                                    <option selected>Cherry</option>
+                                    <option>Lemon</option>
+                                </optgroup>
+                                <optgroup label="vegetables">
+                                    <option>Carrot</option>
+                                    <option>Eggplant</option>
+                                    <option>Potato</option>
+                                </optgroup>
+                            </select>
+                            <label for="selectAlt" class="label-placeholder">Select con optgroup</label>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <div class="mb1">
+                            <div class="form-check-row">
+                                <input type="checkbox" name="checkbox">
+                                <label for="checkbox" class="small">Checkbox</label>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-check-row"><input type="radio" name="radio" value="1" checked><label for="radio1" class="small">Radio 1</label></div>
+                            <div class="form-check-row"><input type="radio" name="radio" value="2"><label for="radio2" class="small">Radio 2</label></div>
+                            <div class="form-check-row"><input type="radio" name="radio" value="3"><label for="radio3" class="small">Radio 3</label></div>
+                        </div>
+                    </fieldset>
+                    <div class="form-row">
+                        <input type="email" name="email" placeholder="Email">
+                        <label for="email" class="label-placeholder">Email</label>
+                    </div>
+                    <div class="form-row">
+                        <textarea name="message" rows="10" cols="30" placeholder="Message"></textarea>
+                        <label for="message" class="label-placeholder">Message</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="text" name="datalist" list="list">
+                        <datalist id="list">
+                            <option value="Internet Explorer">
+                            <option value="Firefox">
+                            <option value="Chrome">
+                            <option value="Opera">
+                            <option value="Safari">
+                        </datalist>
+                        <label for="datalist" class="label-placeholder">Datalist</label>
+                    </div>
+                    <div class="form-row"><input type="range" name="range" value="50"></div>
+                    <div class="form-row"><input type="number" name="number" value="50"></div>
+                    <div class="form-row">OJO: Aquí hay un output que no le hemos dado uso<output name="output" for="range number"></output></div>
+                    <div class="form-row">
+                        <input type="date" name="date">
+                        <label for="date" class="label-placeholder">Decha</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="datetime-local" name="datetimeLocal">
+                        <label for="datetimeLocal" class="label-placeholder">Datetime local</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="month" name="month">
+                        <label for="month" class="label-placeholder">Month</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="week" name="week">
+                        <label for="week" class="label-placeholder">Week</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="time" name="time">
+                        <label for="time" class="label-placeholder">Time</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="tel" name="tel" placeholder="tel">
+                        <label for="tel" class="label-placeholder">tel</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="url" name="url" placeholder="url">
+                        <label for="url" class="label-placeholder">Url</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="search" name="search" placeholder="search">
+                        <label for="search" class="label-placeholder">Search</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="file" name="file">
+                        <label for="file" class="label-placeholder">File</label>
+                    </div>
+                    <div class="form-row submit-row">
+                        <button type="submit" class="btn-loading w100">Iniciar sesión</button>
+                    </div>
+                    <div id="login-options" class="p-relative d-flex space-between mb0-5">
+                        <div class="d-flex-center gap0-5">
+                            <div class="d-flex-center gap0-5">
+                                <input type="checkbox" name="keepmeloggedin" class="switch">
+                                <label for="keepmeloggedin" class="small">Recordarme</label>
+                            </div>
+                            <a is="tool-tip-link" data-tooltip_content="<p class='small'>Al elegir esta opción permanecerás logeado por más tiempo, sin que se te pida iniciar sesión. Usa esta opción solo en dispositivos personales.</p>">(?)</a>
+                        </div>
+                        <a href="javascript:void(0);" class="forgot-password-link small">¿Olvidaste tu contraseña?</a>
+                    </div>
+                    <!--<div class="form-row">
+                        <div is="a-component" data-captcha_name="test" class="d-flex"></div>
+                    </div>-->
+                </form>
+            </section>
+
+            <section id="css-variables">
+                <div>
+                    <h2 class="h4">CSS Variables</h2>
+                    <div class="d-flex test-square">
+                        <div style="background-color: var(--bg-color-1);"></div>
+                        <div style="background-color: var(--bg-color-2);"></div>
+                        <div style="background-color: var(--bg-color-3);"></div>
+                        <div style="background-color: var(--text-color-1);"></div>
+                        <div style="background-color: var(--text-color-2);"></div>
+                        <div style="background-color: var(--text-color-3);"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    
+        <!-- Modal FAQ -->
+        <a-dialog id="faq-modal" 
+            back-button  
+            transition="swipe-up" 
+            scroll-on-wrapper>
+            <h4 class='mb0' slot="header">Preguntas frecuentes... Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus molestias a perferendis adipisci, fugiat ipsam exercitationem consectetur nulla autem corrupti dicta voluptatum optio sit reiciendis, minima eaque, aperiam qui provident?</h4>
+            <small slot="footer">Ética y Solidaridad Para Brindarles Tranquilidad.</small>
+        </a-dialog>
+    
+        <!-- Login Form -->
+        <script src="./js/auth/login.js" async></script>
+    </div>
+</body>
+</html>
+<script>
+    window.endTest = performance.now();
+
+    console.log('Esto tomó ' + (window.endTest - window.startTest) + 'ms para completarse');
+</script>

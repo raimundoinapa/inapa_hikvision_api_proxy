@@ -29,7 +29,8 @@
         protected: {
             authCheck: '/auth/check',
             version: '/api/version',
-            encodeDeviceList: '/api/encoding-devices',
+            encodeDeviceList: '/api/encode-devices',
+            encodeDevice: '/api/encode-device',
             cameraList: '/api/cameras',
             previewURLs: '/api/cameras/streams',
             camera: '/api/camera',
@@ -40,8 +41,8 @@
             patrols: '/api/camera/patrols',
             ptz: '/api/camera/ptz',
             areas: '/api/areas',
+            integralSingle: '/api/camera/integral',
             integral: '/api/cameras/integral',
-            integralSingle: '/api/cameras/integral-single'
         }
     };
     const jsonHeader = { 'Content-Type': 'application/json' };
@@ -281,6 +282,14 @@
         res.end(JSON.stringify(result));
     });
 
+    http.post(endpoints.protected.encodeDevice, async (req, res) => {
+        const {id} = req?._dataBody;
+        const result = await hikcentral.getEncodeDevice(id);
+        
+        res.writeHead(result?.httpStatusCode || 200, jsonHeader);
+        res.end(JSON.stringify(result));
+    });
+
     http.post(endpoints.protected.cameraList, async (req, res) => {
         const result = await hikcentral.getCameras();
         
@@ -359,17 +368,17 @@
         res.end(JSON.stringify(result));
     });
 
-    http.post(endpoints.protected.integral, async (req, res) => {
-        const {protocol} = req?._dataBody;
-        const result = await hikcentral.getIntegralCameraData(protocol);
+    http.post(endpoints.protected.integralSingle, async (req, res) => {
+        const {id, protocol} = req?._dataBody;
+        const result = await hikcentral.getIntegralSingleCameraData(id, protocol);
 
         res.writeHead(result?.httpStatusCode || 200, jsonHeader);
         res.end(JSON.stringify(result));
     });
 
-    http.post(endpoints.protected.integralSingle, async (req, res) => {
-        const {id, protocol} = req?._dataBody;
-        const result = await getIntegralSingleCameraData.getIntegralCameraData(id, protocol);
+    http.post(endpoints.protected.integral, async (req, res) => {
+        const {protocol} = req?._dataBody;
+        const result = await hikcentral.getIntegralCameraData(protocol);
 
         res.writeHead(result?.httpStatusCode || 200, jsonHeader);
         res.end(JSON.stringify(result));

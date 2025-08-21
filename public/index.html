@@ -57,24 +57,22 @@
                 }
             
             #logo {
-                margin: 0;
-                padding: 0;
-                top: 12px;
-                left: -120px;
                 position: absolute;
-                width: 110px;
-                aspect-ratio: 1 / 1;
-                background-image: url(./img/logo.png);
+                z-index: 1005;
             }
 
             #status {
                 float: right;
                 display: flex;
+                flex-direction: column;
                 gap: 0.5rem;
+                align-items: flex-end;
             }
                 #status span {
                     font-size: 0.8rem;
                 }
+            
+            #tools-form { padding-top: 0.5rem; }
 
             #camera-grid {
                 display: grid;
@@ -86,38 +84,37 @@
                 .grid-2x2 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 1)) / 2), 1fr)); }
                 .grid-1x1 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 0)) / 1), 1fr)); }
 
-            #camera-grid [data-camera-index] {
+            .video-player-wrapper {
                 position: relative;
                 aspect-ratio: 16 / 9;
                 color: var(--bg-color-3);
                 background-color: var(--bg-color-3);
             }
-                #camera-grid [data-camera-index] .preloader { color: var(--text-color-1); }
+                .video-player-wrapper .preloader { color: var(--text-color-1); }
                 .video-player-container { background-size: cover; }
                 .video-controls,
                 .camera-status-container,
                 .camera-name-container,
-                [id^="picture-error-msg"] {
+                .stream-error-msg-container {
                     position: absolute;
                     overflow: visible;
                     padding: 10px;
                 }
                 .camera-name,
-                .picture-error {
+                .stream-error {
                     color: var(--bg-color-1);
                     text-shadow: 0 0 5px var(--text-color-1), 
                         0 0 5px var(--text-color-1), 
                         0 0 5px var(--text-color-1);
                 }
                 
-                [id^="refresh"] {
+                .refresh-btn-container {
                     position: absolute;
                     top: 10px;
-                    right: 10px;
+                    right: 2.5rem;
                     z-index: 1000;
                     opacity: 0;
                 }
-                    [id^="refresh"]:hover { opacity: 1; }
 
                 .video-controls {
                     bottom: 0;
@@ -125,12 +122,16 @@
                     z-index: 1000;
                     opacity: 0;
                 }
-                    .video-controls:hover { opacity: 1; }
                     .video-controls .buttons {
                         position: relative;
                         display: flex;
                         gap: 1rem;
                     }
+
+                .video-player-wrapper:hover .refresh-btn-container,
+                .video-player-wrapper:hover .video-controls {
+                    opacity: 1;
+                }
 
                 .camera-status-container {
                     bottom: 0;
@@ -149,9 +150,10 @@
                 }
                     .camera-name-container .small { font-size: 0.7rem; }
                 
-                [id^="picture-error-msg"] {
+                .stream-error-msg-container {
                     top: calc(50% - 1rem);
                     left: 1rem;
+                    z-index: 999;
                 }
 
                 .video-player-container {
@@ -164,8 +166,18 @@
                         border: none !important;
                     }
 
-            @media screen and (max-width: 1120px) {
+            @media screen and (max-width: 1174px) {
+                #logo {
+                    top: 12px;
+                }
+
                 #tools-form { flex-direction: column; }
+
+                #status {
+                    float: none;
+                    align-items: center;
+                    padding-top: 12px;
+                }
             }
 
             #camera-grid-wrapper:-webkit-full-screen {
@@ -202,17 +214,19 @@
         <div class="global-preloader"></div>
         <main>
             <div class="container">
-                <h1 id="logo"><span class="d-none">INAPA - Sistema de Monitoreo</span></h1>
+                <h1 id="logo" class="m0 p0"><img src="./img/logo.png" alt="Logo INAPA" width="75px"><span class="d-none">INAPA - Sistema de Monitoreo</span></h1>
 
                 <div id="status">
-                    <div><a-badge success circle id='online-badge'>12</a-badge> <span>Online</span></div>
-                    <div><a-badge danger circle id='offline-badge'>2</a-badge> <span>Offline</span></div>
-                    <div><a-badge info circle id='total-badge'>12</a-badge> <span>Total</span></div>
-                    <div><dark-mode-toggler icon-size="1.5em"></dark-mode-toggler></div>
+                    <div>
+                        <dark-mode-toggler icon-size="1.5em"></dark-mode-toggler>
+                    </div>
+                    <div>
+                        <a-badge success pill id='online-badge'>12 Online</a-badge> <a-badge danger pill id='offline-badge'>2 Offline</a-badge> <a-badge info pill id='total-badge'>12 Total</a-badge>
+                    </div>
                 </div>
 
-                <form action="/test" method="post" id="tools-form" is="super-form" novalidate="" class="d-flex items-center gap0-5 mt1 mb1">
-                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                <form action="/test" method="post" id="tools-form" is="super-form" novalidate="" class="d-flex-center gap0-5 mt1">
+                    <div class="d-flex-center gap0-5 mb1">
                         <div class="form-row mb0">
                             <div class="d-flex gap0-5">
                                 <div><!-- Lupa -->
@@ -226,7 +240,7 @@
                         <div><a-button info>᎒᎒᎒</a-button></div>
                         <div><a-button info>⋮⋮⋮</a-button></div> -->
                     </div>
-                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                    <div class="d-flex-center gap0-5 mb1">
                         <div class="form-row mb0">
                             <select name="status-select"></select>
                             <label class="label-placeholder">Status</label>
@@ -246,15 +260,15 @@
                             <label class="label-placeholder">Ordenar por</label>
                         </div>
                     </div>
-                    <div class="d-flex items-center justify-center gap0-5 mb1">
+                    <div class="d-flex-center gap0-5 mb1">
                         <div class="form-row mb0">
                             <select name="grid-size-select">
                             </select>
                             <label class="label-placeholder">Tamaño</label>
                         </div>
-                        <div><a-button id="btn-start-all" success>▶ Iniciar todo</a-button></div>
-                        <div><a-button id="btn-stop-all" danger>⏹ Detener todo</a-button></div>
-                        <div><a-button id="btn-fullscreen-all" warning><an-icon full-screen></an-icon></a-button></div>                        
+                        <div><a-button id="btn-start-all" success aria-label="Iniciar todo">▶ <span class="d-none">Iniciar todo</span></a-button></div>
+                        <div><a-button id="btn-stop-all" danger aria-label="Detener todo">⏹ <span class="d-none">Detener todo</span></a-button></div>
+                        <div><a-button id="btn-fullscreen-all" warning aria-label="Fullscreen"><an-icon full-screen></an-icon></a-button></div>                        
                         <div><a-button id="btn-refresh-all" info aria-label="Refresh"><an-icon refresh size="1.2em"></an-icon></a-button></div>
                     </div>
                 </form>
@@ -305,6 +319,11 @@
             </style>
 
             <form action="#" method="post" data-bind="filters-form" is="super-form" novalidate="" class="mb0" id="filters-form">
+                <fieldset>
+                    <legend class="w100">Favoritos <a-badge info data-bind="favorites-count">1</a-badge> <div>Selected <a-badge success data-bind="favorites-selected-count">0</a-badge></div></legend>
+                    <div class="form-row" data-bind="favorites-container"></div>
+                </fieldset>
+                
                 <fieldset>
                     <legend class="w100">Capabilities <a-badge info data-bind="capabilities-count">0</a-badge> <div>Selected <a-badge success data-bind="capabilities-selected-count">0</a-badge></div></legend>
                     <div class="form-row" data-bind="capabilities-container"></div>

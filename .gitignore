@@ -65,7 +65,3 @@ ssl/
 *.crt
 *.pfx
 *.p12
-
-# Test reports
-junit.xml
-test-results.xml

@@ -4,6 +4,7 @@
     const apiDomain = '172.20.2.99';
     const port = '3000';
     const apiServerUrl = `${apiServerProtocol}://${apiDomain}${! port ? '' : ':' + port}`;
+    const defaultStreamProtocol = 'websocket';
     const endpoints = {
         auth: '/auth/login',
         health: '/health',
@@ -11,7 +12,8 @@
         protected: {
             authCheck: '/auth/check',
             version: '/api/version',
-            encodeDeviceList: '/api/encoding-devices',
+            encodeDeviceList: '/api/encode-devices',
+            encodeDevice: '/api/encode-device',
             cameraList: '/api/cameras',
             previewURLs: '/api/cameras/streams',
             camera: '/api/camera',
@@ -22,14 +24,14 @@
             patrols: '/api/camera/patrols',
             ptz: '/api/camera/ptz',
             areas: '/api/areas',
+            integralSingle: '/api/camera/integral',
             integral: '/api/cameras/integral',
-            integralSingle: '/api/cameras/integral-single'
         }
     };
     
     const appLoadTimestamp = new Date().getTime();
-    const dbMinTimeBetweenUpdates = 1 * 60 * 60 * 1000;
-    const captureMinTimeBetweenUpdates = 15 * 60 * 1000;
+    const dbMinTimeBetweenUpdates = 3 * 60 * 60 * 1000;//Tres horas
+    const captureMinTimeBetweenUpdates = 1 * 60 * 60 * 1000;//Una hora
     const statusOptions = {
         '': 'Todos',
         1: 'Online',
@@ -54,34 +56,33 @@
     const configOptions = app.get('configOptions') ? JSON.parse(app.get('configOptions')) : {
         username: '',
         usertoken: '',
-        filterCameras: [],/*15, 22, 65*/
         filterStatus: Object.keys(statusOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b)[0],
-        filterCapabilities: [],/*ptz, thermal, anpr*/
-        filterDevices: [],/*14, 7, 44*/
-        filterAreas: [],/*52, 57, 22*/
-        searchKeywords: '',/*Lobby Santiago, Estacionamiento La Vega*/
+        filterFavorites: [],
+        filterCapabilities: [],
+        filterDevices: [],
+        filterAreas: [],
+        searchKeywords: '',/*Listado de palabras separadas por (,), ej.: Lobby Santiago, Estacionamiento La Vega*/
+        favorites: [],
         sortBy: Object.keys(sortOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b)[0],
         gridSize: Object.keys(gridOptions).sort((a, b) => b - a)[0],
         currentPage: 1,
         lastDBUpdate: '',
     };
     const cameraCount = {online: 0, offline: 0};
-    const specialFilterStoreNames = ['filterCapabilities', 'filterDevices', 'filterAreas'];
-    const filterProps = ['cameraName', ['area', 'name'], ['encodeDeviceInfo', 'encodeDevName']];
+    const specialFilterStoreNames = ['filterFavorites', 'filterCapabilities', 'filterDevices', 'filterAreas'];
+    const sortProps = ['cameraName', ['area', 'name'], ['encodeDeviceInfo', 'encodeDevName']];
     const dataObj = {
         local: [],
         remote: [],
         filtered: []
     };
     const filtersObj = {
+        favorites: [['favorite', 'Favorito']],
         capabilities: [],
         devices: [],
         areas: [],
     };
-    const playersObj = {
-        play: [],
-        capture: []
-    }
+    const playersStatus = {};
 
     const dbName = app.get('dbName') || 'inapa_cctv';
     const dbVersion = app.get('dbVersion') || 1;
@@ -190,11 +191,15 @@
         //que puedan ser expandidos y/o contraidos y checkboxes para elegir, si elegimos un nodo principal, se eligen todos los hijos, si quitamos
         //la elección de uno de los hijos, el check del nodo cambia a un estado intermedio.
         //Un filtro o buscardor para reducir la lista para elegir sería un plus muy importante
-        if (configOptions?.filterCameras?.length) {
-            dataObj.filtered = dataObj.filtered.filter(f => configOptions.filterCameras.includes(f.cameraIndexCode));
+        //En su defecto, de no implementar este feature, simplemente agregar un botón para agregar a favoritos a las cartas
+            //Para el caso de Favorites, lo puse como parte de los filtros especiales solo que que visualmente funcionen como los demas filtros especiales.
+            //Pero para fines de filtrado, es independiente, el cotejo servirá solo para saber si esta activo o nó
+        if (configOptions.filterFavorites.length && configOptions.favorites.length) {
+            dataObj.filtered = dataObj.filtered.filter(f => configOptions.favorites.includes(f.cameraIndexCode));
         }
 
-        if (specialFilterStoreNames.some((s) => configOptions?.[s]?.length)) {
+        //Aqui nos aseguramos de que filterFavorites no sea parte de los filtros especiales
+        if (specialFilterStoreNames.some((s) => 'filterFavorites' != s && configOptions?.[s]?.length)) {
             dataObj.filtered = dataObj.filtered.filter((f) => {
                 return configOptions.filterCapabilities.includes(f.capabilitySet) || 
                     configOptions.filterDevices.includes(f.encodeDevIndexCode) || 
@@ -214,7 +219,7 @@
         if (configOptions.sortBy) {
             const isAsc = configOptions.sortBy % 2;
             const propIndex = Math.floor(configOptions.sortBy / 2) - (! isAsc ? 1 : 0);
-            const prop = filterProps[propIndex];
+            const prop = sortProps[propIndex];
 
             dataObj.filtered.sort((a, b) => {
                 if ('string' == typeof prop) {
@@ -238,21 +243,53 @@
 
     const disablePagination = () => {
         const btns = q('#pagination a-button', true) || [];
+        const pageJump = q('#pagination select');
         
-        btns.forEach(b => b.setAttr = {disabled: true});
+        if (btns?.length) {
+            btns.forEach(e => e.setAttr = {disabled: true});
+        }
+
+        if (pageJump) { pageJump.disabled = true; }
     }
 
     const enablePagination = () => {
         const btns = q('#pagination a-button', true) || [];
-        
-        btns.forEach(b => b.remAttr = 'disabled');
+        const pageJump = q('#pagination select');
+        const lastPage = pageJump?.options?.length;
+
+        if (btns?.length) {
+            const btnPrev = btns[0];
+            const btnNext = btns[btns.length - 1];
+
+            btns.forEach((e) => {
+                const curentPage = e.dataset.currentPage;
+
+                if (curentPage) {
+                    if (1 == curentPage) {
+                        btnPrev.setAttr = {disabled: true}
+                    }
+                    
+                    if (lastPage && lastPage == curentPage) {
+                        btnNext.setAttr = {disabled: true}
+                    }
+                } else {
+                    e.remAttr = 'disabled';
+                }
+            });
+        }
+
+        if (pageJump) { pageJump.disabled = false; }
     }
     
     const stopAllPlayers = () => {
-        for (let i = 0; i < playersObj.play.length; i++) {
-            const btn = playersObj.play[i];
+        const playerEntries = Object.values(playersStatus);
 
-            if (btn.$el?.data?.isPlaying) { btn.click(); }
+        if (playerEntries?.length) {
+            playerEntries.forEach((p) => {
+                if (p.isPlaying) {
+                    p.btnPlay.click();
+                }
+            });
         }
     }
 
@@ -269,9 +306,8 @@
 
         stopAllPlayers();
         
-        //Limpiamos el listado
-        playersObj.play = [];
-        playersObj.capture = [];
+        //Limpiamos todo
+        Object.keys(playersStatus).forEach(p => delete playersStatus[p]);
 
         //Si el grid es 4x4
         //0-15, 16-31, 32-47
@@ -285,64 +321,59 @@
 
             if (! camera) { break; }
 
+            const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
             const isOnline = camera?.status && camera.status.toString() == '1';
             const isPTZ = camera?.capabilitySet && camera.capabilitySet.toLowerCase().includes('ptz');
-            const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
-            const videoPlayerContainerId = `video-player--container-${camera.cameraIndexCode}`;
-            const videoPlayerWrapper = create('div', {'data-camera-index': camera.cameraIndexCode});
-            const videoPlayerContainer = create('div', {id: videoPlayerContainerId}, {className: 'video-player-container'});
-            const videoPlayerObject = {
-                video: {},
-                isOnline,
-                captureRetry: false
-            };
+            const favoriteHighLight = ! configOptions.favorites.includes(camera.cameraIndexCode) ? '': ' info';
+            const videoPlayerWrapper = create('div', false, {className: 'video-player-wrapper'});
+            const videoPlayerContainer = create('div', {id: `video-player-container-${camera.cameraIndexCode}`}, {className: 'video-player-container'});
             const preloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
             const nameBadge = `<span class="small">${cameraFullName}</span>`;
-            const statusBadge = ! isOnline ? '<a-badge danger pulse>Offline</a-badge>' : '';
-            const disableButton = ! isOnline ? ' disabled' : '';
-            const btnRefreshStr = ! isOnline ? `<a-button icon circle id="refresh-${camera.cameraIndexCode}" aria-label="Reload Camera"><an-icon refresh></an-icon></a-button>` : '';
-            const btnPTZStr = isPTZ ? `
-                <a-button icon circle id="ptz-${camera.cameraIndexCode}" aria-label="PTZ commands modal" disabled>
-                    <style>
-                        .controller {
-                            width: 15px;
-                            height: 14px;
-                            background-image: url('./img/controller.png');
-                        }
-                    </style>
-                    <div class="controller"></div>
-                </a-button>
-            ` : '';
+            const onlineBadge = '<a-badge danger pulse>Online</a-badge>';
+            const offlineBadge = '<a-badge danger pulse>Offline</a-badge>';
+            const statusBadge = ! isOnline ? offlineBadge : '';
 
             videoPlayerWrapper.innerHTML = `
-                ${btnRefreshStr}
+                <div class="refresh-btn-container">
+                    <a-button icon circle id="refresh-${camera.cameraIndexCode}" aria-label="Recargar Cámera" disabled><an-icon refresh></an-icon></a-button>
+                </div>
                 <div class="video-controls">
                     <div class="buttons">
-                        <a-button icon circle id="play-stop-${camera.cameraIndexCode}" aria-label="Play"${disableButton}><span style="font-size: 1rem; margin:0 0 3px 2px">▶</span></a-button>
-                        <a-button icon circle id="capure-${camera.cameraIndexCode}" aria-label="Take Picture" disabled><an-icon camera></an-icon></a-button>
-                        ${btnPTZStr}
-                        <a-button id="stream-switch-${camera.cameraIndexCode}" aria-label="Reload Camera" disabled>
+                        <a-button icon circle id="play-stop-${camera.cameraIndexCode}" aria-label="Play" disabled><span style="font-size: 1rem; margin:0 0 3px 2px">▶</span></a-button>
+                        <a-button icon circle id="capure-${camera.cameraIndexCode}" aria-label="Tomar Foto" disabled><an-icon camera></an-icon></a-button>
+                        <a-button icon circle id="ptz-${camera.cameraIndexCode}" aria-label="Comandos PTZ" disabled>
+                            <style>
+                                .controller {
+                                    width: 15px;
+                                    height: 14px;
+                                    background-image: url('./img/controller.png');
+                                }
+                            </style>
+                            <div class="controller"></div>
+                        </a-button>
+                        <a-button id="stream-switch-${camera.cameraIndexCode}" aria-label="Cambiar Stream" disabled>
                             <style>
                                 :host(:not([icon])) .body {
                                     padding: 0.1rem 0.3rem 0 0.3rem;
                                 }
                             </style>
-                            <span data-bind="hilores" style="font-size: 0.85rem;">hi-res</span>
+                            <span style="font-size: 0.85rem;">hi-res</span>
                         </a-button>
+                        <a-button icon circle id="favorite-${camera.cameraIndexCode}" aria-label="Agregar a favoritos"${favoriteHighLight} disabled><an-icon star></an-icon></a-button>
                     </div>
                 </div>
-                <div class="camera-status-container">
+                <div id="camera-status-msg-${camera.cameraIndexCode}" class="camera-status-container">
                     <div class="camera-status">${statusBadge}</div>
                 </div>
                 <div class="camera-name-container">
                     <div class="camera-name protected-from-dark">${nameBadge}</div>
                 </div>
-                <div id="picture-error-msg-${camera.cameraIndexCode}" class="picture-error-container d-none">
-                    <div class="picture-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error en captura de imagen</div>
+                <div id="stream-error-msg-${camera.cameraIndexCode}" class="stream-error-msg-container d-none">
+                    <div class="stream-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error del servidor de streaming</div>
                 </div>
             `;
 
-            if (camera?.capture?.length) { videoPlayerContainer.style.backgroundImage = `url(${camera.capture})`; }
+            videoPlayerContainer.style.backgroundImage = ! camera?.capture?.length ? `url(./img/camera-bg-placeholder.jpg)` : `url(${camera.capture})`;
 
             videoPlayerWrapper.appendChild(videoPlayerContainer);
             gridContainer.appendChild(videoPlayerWrapper);
@@ -352,49 +383,83 @@
             const btnCapure = q(`#capure-${camera.cameraIndexCode}`);
             const btnPtz = q(`#ptz-${camera.cameraIndexCode}`);
             const btnStreamSwitch = q(`#stream-switch-${camera.cameraIndexCode}`);
-            const picErroMsg = q(`#picture-error-msg-${camera.cameraIndexCode}`);
+            const btnFavorite = q(`#favorite-${camera.cameraIndexCode}`);
+            const cameraStatusMsg = q(`#camera-status-msg-${camera.cameraIndexCode}`);
+            const streamErrorMsg = q(`#stream-error-msg-${camera.cameraIndexCode}`);
+
+            playersStatus[camera.cameraIndexCode] = {
+                isOnline,
+                btnPlay,
+                JSPlugin: false,
+                videoPlayer: {},
+                isPlaying: false,
+                isMainStream: false,
+                captureRetry: false,
+                streamError: false,
+                playStopFnc: false
+            }
+
+            const vpStatus = playersStatus[camera.cameraIndexCode];
             
             const imBusy = () => {
                 videoPlayerWrapper.appendChild(preloader);
-    
-                if (btnRefresh) { btnRefresh.setAttr = 'disabled'; }
-                
-                btnPlay.setAttr = 'disabled';
-                btnCapure.setAttr = 'disabled';
-                
-                if (btnPtz) { btnPtz.setAttr = 'disabled'; }
-    
-                btnStreamSwitch.setAttr = 'disabled';
+
+                [btnRefresh, btnPlay, btnCapure, btnPtz, btnStreamSwitch, btnFavorite].forEach(b => b.setAttr = 'disabled');
             };
     
             const imNotBusy = () => {
-                if (btnRefresh) { btnRefresh.remAttr = 'disabled'; }
-    
-                if (videoPlayerObject.isOnline) {
-                    btnPlay.remAttr = 'disabled';
-    
-                    if (btnPlay?.$el?.data?.isPlaying) {
+                if (! vpStatus.isOnline) {
+                    btnRefresh.remAttr = 'disabled';
+                } else {
+                    if (! vpStatus.isPlaying) {
+                        btnPlay.remAttr = 'info';
+
+                        if (btnPlay?.$el?.body) {
+                            btnPlay.$el.body.innerHTML = '<span style="font-size: 1rem; margin:0 0 3px 2px">▶</span>';
+                        }
+
+                        btnStreamSwitch.remAttr = 'info';
+                    } else {
+                        btnPlay.setAttr = {info: true};
+
+                        if (btnPlay?.$el?.body) {
+                            btnPlay.$el.body.innerHTML = '<span style="font-size: 1rem">⏹</span>';
+                        }
+
                         btnCapure.remAttr = 'disabled';
 
-                        if (btnPtz) { btnPtz.remAttr = 'disabled'; }
-    
+                        if (isPTZ) { btnPtz.remAttr = 'disabled'; }
+
+                        if (! vpStatus.isMainStream) {
+                            btnStreamSwitch.remAttr = 'info';
+                        } else {
+                            btnStreamSwitch.setAttr = {info: true};
+                        }
+
                         btnStreamSwitch.remAttr = 'disabled';
                     }
+
+                    btnPlay.remAttr = 'disabled';
                 }
+
+                btnFavorite.remAttr = 'disabled';
+
+                streamErrorMsg.className = 'stream-error-msg-container' + (! vpStatus.streamError ? ' d-none' : '');
     
                 preloader._remove();
             };
 
             const takePicture = async (download = false) => {                
-                if (! videoPlayerObject.isOnline) { return false; }
+                if (! vpStatus.isOnline) { return false; }
 
                 imBusy();
 
                 const timeStamp = new Date().getTime();
-                const camFromDB = await dbRequest._get('cameras', {index: 'cameraIndexCode', value: camera.cameraIndexCode});
+
+                let capturedPicture = '';
     
-                if (! btnPlay.$el?.data?.isPlaying) {
-                    if (! camFromDB?.captureTimestamp || (timeStamp - camFromDB.captureTimestamp) > captureMinTimeBetweenUpdates) {
+                if (! vpStatus.isPlaying) {
+                    if (! camera?.captureTimestamp || (timeStamp - camera.captureTimestamp) > captureMinTimeBetweenUpdates) {
                         const capture = await runFetch(apiServerUrl + endpoints.protected.capture, {
                             method: 'POST',
                             headers: {
@@ -405,36 +470,26 @@
                         });
 
                         if (! capture?.data?.length || capture?.data?.code) {
-                            picErroMsg.className = '';
-                            
-                            showSnackbar(`Error al tomar foto en la cámara ${camera.cameraIndexCode}`, 'warning');
+                            vpStatus.streamError = true;
+
+                            showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
                         } else {
-                            camFromDB.capture = capture.data;
-                            camFromDB.captureTimestamp = timeStamp;
-                            dbRequest._put('cameras', camFromDB);
+                            vpStatus.streamError = false;
 
-                            videoPlayerContainer.style.backgroundImage = `url(${capture.data})`;
+                            capturedPicture = capture.data;
 
-                            picErroMsg.className = 'd-none';
-
-                            console.log('Foto remota tomada a', camera.cameraIndexCode, camFromDB.captureTimestamp);
+                            console.log('Foto remota tomada a', camera.cameraIndexCode, timeStamp);
                         }
                     }
                 } else {
                     const canvas = create('canvas');
                     const context = canvas.getContext('2d');
     
-                    canvas.width = videoPlayerObject.video.videoWidth;
-                    canvas.height = videoPlayerObject.video.videoHeight;
-                    context.drawImage(videoPlayerObject.video, 0, 0, canvas.width, canvas.height);
+                    canvas.width = vpStatus.video.videoWidth;
+                    canvas.height = vpStatus.video.videoHeight;
+                    context.drawImage(vpStatus.video, 0, 0, canvas.width, canvas.height);
                     
-                    const dataUrl = canvas.toDataURL('image/png');
-
-                    camFromDB.capture = dataUrl;
-                    camFromDB.captureTimestamp = timeStamp;
-                    dbRequest._put('cameras', camFromDB);
-    
-                    videoPlayerContainer.style.backgroundImage = `url(${dataUrl})`;
+                    capturedPicture = canvas.toDataURL('image/png');
 
                     if (download) {
                         const link = create('a', {href: dataUrl, download: `${camera.cameraIndexCode}_capture_${timeStamp}.png`});
@@ -442,20 +497,26 @@
                         link.click();
                     }
                 }
+
+                if  (capturedPicture) {
+                    camera.capture = capturedPicture;
+                    camera.captureTimestamp = timeStamp;
+                    dbRequest._put('cameras', camera);
+
+                    videoPlayerContainer.style.backgroundImage = `url(${capturedPicture})`;
+                }
     
                 imNotBusy();
 
                 return true;
             };
 
-            const playStopStream = async (mainStream = false, offlineCheck = false) => {
-                if (! offlineCheck && ! videoPlayerObject.isOnline) { return false; }
-
-                imBusy();
+            const playStopStream = async (isMainStream = false) => {
+                if (! vpStatus.isOnline) { return false; }
     
-                if (! btnPlay.$el.data?.newJSPlugin) {
-                    btnPlay.$el.data.newJSPlugin = new JSPlugin({
-                        szId: videoPlayerContainerId,
+                if (! vpStatus.JSPlugin) {
+                    vpStatus.JSPlugin = new JSPlugin({
+                        szId: videoPlayerContainer.id,
                         iWidth: '100%',
                         iHeight: '100%',
                         iMaxSplit: 1,
@@ -467,67 +528,50 @@
                             background: "none"
                         }
                     });
-    
-                    //playersInstancesForWindowResize.push(btnPlay.$el.data.newJSPlugin);
                 }
     
-                if (! btnPlay.$el?.data?.isPlaying) {
-                    console.log(`Iniciando transmisión de cámara ${camera.cameraIndexCode}`);
-    
+                if (! vpStatus.isPlaying) {
                     try {
-                        await btnPlay.$el.data.newJSPlugin.JS_Play(camera.subStream, {
-                            playURL: ! mainStream ? camera.subStream : camera.mainStream,
+                        console.log(`Iniciando transmisión de cámara ${camera.cameraIndexCode}`);
+
+                        imBusy();
+                        
+                        await vpStatus.JSPlugin.JS_Play(camera.subStream, {
+                            playURL: ! isMainStream ? camera.subStream : camera.mainStream,
                             auth: "",
                             mode: "media",
                             token: ""
                         }, 0);
-    
-                        btnPlay.$el.data.isPlaying = true;
-                        //btnPlay.$el.body.innerHTML = '<an-icon stop></an-icon>';
-                        btnPlay.$el.body.innerHTML = '<span style="font-size: 1rem">⏹</span>';
-                        btnPlay.setAttr = {info: true};
-    
-                        videoPlayerObject.video = videoPlayerContainer.querySelector('video');
 
-                        if (! mainStream) {
-                            btnStreamSwitch.remAttr = 'info';
-                        } else {
-                            btnStreamSwitch.setAttr = {info: true};
-                        }
-
-                        if (videoPlayerObject.video?.parentNode) {
-                            const jqObj = Object.keys(videoPlayerObject.video.parentNode)?.[0]
-                            
-                            if (jqObj) {
-                                //delete videoPlayerObject.video.parentNode[jqObj].events.dblclick[0].handler;;
-                                //delete videoPlayerObject.video.parentNode[jqObj].events.dblclick;
-                                delete videoPlayerObject.video.parentNode[jqObj];
-                            }
-                        }
-
-                        if (offlineCheck) {
-                            videoPlayerObject.isOnline = true;
-
-                            btnRefresh._remove();
-
-                            if (camFromDB?.cameraIndexCode) {            
-                                camFromDB.status = '1';
+                        vpStatus.video = videoPlayerContainer.querySelector('video');
+                        vpStatus.isPlaying = true;
+                        vpStatus.isMainStream = isMainStream;
+                        vpStatus.streamError = false;
                         
-                                dbRequest._put('cameras', camFromDB);
+                        if (vpStatus.video?.parentNode) {
+                            const jqObj = Object.keys(vpStatus.video.parentNode)?.[0]
+                            
+                            //Le quitamos los eventos para fullscreen y otros eventos agregados por JSPlugin al elemento video
+                            if (jqObj) {
+                                //delete vpStatus.video.parentNode[jqObj].events.dblclick[0].handler;;
+                                //delete vpStatus.video.parentNode[jqObj].events.dblclick;
+                                delete vpStatus.video.parentNode[jqObj];
                             }
                         }
+
+                        imNotBusy();
+
+                        console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
 
                         takePicture();
-    
-                        console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
                     } catch(err) {
+                        vpStatus.streamError = true;
+
                         console.error(err);
                         
                         showSnackbar(`No se pudo inicar la transmisión de la cámara ${camera.cameraIndexCode}`, 'warning');
 
-                        if (offlineCheck) {
-                            btnRefresh.remAttr = 'disabled';
-                        }
+                        imNotBusy();
                     }
                 } else {
                     console.log(`Deteniendo transmisión de cámara ${camera.cameraIndexCode}`);
@@ -535,22 +579,21 @@
                     try {
                         await takePicture();
 
-                        btnPlay.$el.data.newJSPlugin.JS_Stop(0);
-                        
-                        videoPlayerObject.video = {};
+                        imBusy();
+
+                        vpStatus.JSPlugin.JS_Stop(0);
+
+                        vpStatus.video = {};
+                        vpStatus.isPlaying = false;
+                        vpStatus.isMainStream = false;
+
+                        imNotBusy();
                     } catch (err) {
                         console.error(err);
-                    }
-    
-                    btnPlay.$el.data.isPlaying = false;
-                    //btnPlay.$el.body.innerHTML = '<an-icon play></an-icon>';
-                    btnPlay.$el.body.innerHTML = '<span style="font-size: 1rem; margin:0 0 3px 2px">▶</span>';
-                    btnPlay.remAttr = 'info';
 
-                    btnStreamSwitch.remAttr = 'info';
+                        imNotBusy();
+                    }
                 }
-    
-                imNotBusy();
 
                 return true;
             }
@@ -585,42 +628,81 @@
             btnStreamSwitch._on('click', async (evt) => {
                 evt.preventDefault();
     
-                if (btnPlay.$el?.data?.isPlaying) {
-                    const hires = ! btnStreamSwitch.getAttr?.['info'];
-
-                    console.log(hires);
+                if (vpStatus.isPlaying) {
+                    const hires = ! vpStatus.isMainStream;
                     
                     await playStopStream();//Detenemos el stream actual
+
                     playStopStream(hires);//Iniciamos el stream de nuevo
                 }
             });
 
-            if (btnRefresh) {
-                btnRefresh._on('click', async (evt) => {
-                    evt.preventDefault();
+            btnFavorite._on('click', async (evt) => {
+                evt.preventDefault();
 
-                    playStopStream(false, true);
+                if (! configOptions.favorites.includes(camera.cameraIndexCode)) {
+                    configOptions.favorites.push(camera.cameraIndexCode);
+
+                    btnFavorite.setAttr = { info: true };
+                } else {
+                    configOptions.favorites.splice(configOptions.favorites.indexOf(camera.cameraIndexCode), 1); 
+
+                    btnFavorite.remAttr = 'info';
+                }
+
+                saveConfig();
+            });
+
+            //OJO: Implementar el refrescado de 1 player, esto incluye pedir los datos al servidor actualizar los datos locales y actualizar el player, y en caso de que la entrada no exista dejar un placeholder para no reorganizar
+            //la vista sino hasta la siguiente interación con cualquiera de los filtros o el paginador (el paginador cambiaría en tal caso, lo que crearía un error lógico no grave con la relación al númeor de página actual)
+            btnRefresh._on('click', async (evt) => {
+                evt.preventDefault();
+
+                imBusy();
+
+                const cameraCheck = await runFetch(apiServerUrl + endpoints.protected.integralSingle, {
+                    method: 'POST',
+                    headers: {
+                        authorization: `Bearer ${configOptions.token}`
+                    },
+                    body: JSON.stringify({id: camera.cameraIndexCode, protocol: defaultStreamProtocol}),
+                    timeout: 10000
                 });
-            }
 
-            playersObj.play.push(btnPlay);
-            playersObj.capture.push(btnCapure);
-            btnPlay.$el.data.playStopStream = playStopStream;
-            
-            if (isOnline && ! camera?.captureTimestamp) {
-                (async () => {
-                    console.log('Tomando foto remota a', camera.cameraIndexCode);
+                if (cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
+                    vpStatus.isOnline = true;
 
-                    await takePicture();
-
-                    if (! camera?.captureTimestamp && ! videoPlayerObject.captureRetry) {
-                        console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
-
-                        takePicture();
-
-                        videoPlayerObject.captureRetry = true;
+                    if (camera?.captureTimestamp && camera?.capture) {
+                        cameraCheck.captureTimestamp = camera.captureTimestamp;
+                        cameraCheck.capture = camera.capture;
                     }
-                })();
+
+                    dbRequest._put('cameras', cameraCheck);
+                }
+
+                imNotBusy();
+            });
+            
+            imNotBusy();//Activamos los botones necesarios
+            
+            if (vpStatus.isOnline) {
+                vpStatus.playStopFnc = playStopStream;
+
+                if (! camera?.captureTimestamp) {
+                    (async () => {
+                        console.log('Tomando foto remota a', camera.cameraIndexCode);
+    
+                        await takePicture();
+    
+                        if (! camera?.captureTimestamp && ! vpStatus.captureRetry) {
+                            console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
+    
+                            takePicture();
+    
+                            vpStatus.captureRetry = true;
+                        }
+                    })();
+                }
             }
         }
 
@@ -697,6 +779,7 @@
                 btn.remAttr = 'info';
                 btn.setAttr = {success: true};
                 btn.setAttr = {disabled: true};
+                btn.dataset.currentPage = i;
             } else {
                 btn._on('click', (evt) => {
                     evt.preventDefault();
@@ -715,7 +798,7 @@
 
         paginationForm.appendChild(nextButton);
 
-        const selectBox = create('select', false, {style: {width: 'auto'}});
+        const selectBox = create('select', {name: 'page-jump'}, {style: {width: 'auto'}});
 
         for (let i = 1; i <= totalPages; i++) {
             const opt = create('option', {value: i}, {innerHTML: `Página ${i}`});
@@ -765,7 +848,7 @@
 
         if ('success' != authCheck?.status) {
             if (! await login()) { return false; }
-        }        
+        }
     } else {
         if (! await login()) { return false; }
 
@@ -776,8 +859,6 @@
             }
         });
 
-        showSnackbar(`<h2>${version?.data?.produceName || ''}</h2><h5>${version?.data.softVersion || ''}</h5>`, 'info');
-
         console.log(version);
     }
 
@@ -785,9 +866,9 @@
 
     if (! configOptions.lastDBUpdate || (appLoadTimestamp - configOptions.lastDBUpdate) > dbMinTimeBetweenUpdates) {
         if (! configOptions.lastDBUpdate) {
-            console.log('Hay que actualizar la base de datos');
+            showSnackbar(`<h2>Instalando</h2><p>Actualizando base de datos...</p>`, 'info');
         } else {
-            console.log(`Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. Ejecutaremos una nueva actualización`);
+            showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. Ejecutaremos una nueva actualización</p>`, 'info');
         }
 
         dataObj.remote = await runFetch(apiServerUrl + endpoints.protected.integral, {
@@ -795,13 +876,13 @@
             headers: {
                 authorization: `Bearer ${configOptions.token}`
             },
-            body: JSON.stringify({protocol: 'websocket'}),
+            body: JSON.stringify({protocol: defaultStreamProtocol}),
             timeout: 60000
         });
 
         dataObj.remote = dataObj.remote?.data?.list || [];
 
-        //OJO: Estas dos líneas es para simular la respuesta del server
+        //OJO: Estas dos líneas so para simular la respuesta del server
         //dataObj.remote = await runFetch('./db.json');
         //dataObj.remote = dataObj.remote?.data?.list || [];
 
@@ -867,13 +948,12 @@
         filtersObj.devices.push([f.encodeDevIndexCode, f.encodeDeviceInfo.encodeDevName]);
         filtersObj.areas.push([f.regionIndexCode, f.area.name]);
 
-        if (1 == f.status) { cameraCount.online++; }
-        if (2 == f.status) { cameraCount.offline++; }
+        if (1 == f.status) { cameraCount.online++; } else { cameraCount.offline++; }
     });
 
-    onlineBadge.$el.body.innerHTML = cameraCount.online;
-    offlineBadge.$el.body.innerHTML = cameraCount.offline;
-    totalBadge.$el.body.innerHTML = cameraCount.online + cameraCount.offline;
+    onlineBadge.$el.body.innerHTML = `${cameraCount.online} Online`;
+    offlineBadge.$el.body.innerHTML = `${cameraCount.offline} Offline`;
+    totalBadge.$el.body.innerHTML = `${cameraCount.online + cameraCount.offline} Total`;
 
     toolsForm.elements['search'].value = configOptions.searchKeywords;
     
@@ -946,19 +1026,6 @@
         #camera-grid-wrapper:-moz-full-screen { --max-width: ${screen.width}px; }
         #camera-grid-wrapper:-ms-full-screen { --max-width: ${screen.width}px; }
     `}));
-
-    /*
-    const playersInstancesForWindowResize = [];
-
-    window.onresize = function () {
-        playersInstancesForWindowResize.forEach((player) => {
-            player.JS_Resize('100%', '100%').then(function () {
-                console.log("JS_Resize exitoso");
-            }, function () {
-                console.error("JS_Resize fallido");
-            });
-        });
-    }*/
 
     //Esta viene siendo la acción del search
     toolsForm._onsubmit = async (evt, frm, frmData) => {
@@ -1079,23 +1146,38 @@
     };
 
     btnStartAll._on('click', async (evt) => {
+        const playerEntries = Object.values(playersStatus);
+
+        if (! playerEntries?.length) { return false; }
+        
         disableForm(toolsForm);
         disableForm(filtersDialog.$el['filters-form']);
         disablePagination();
 
+        /* if (playerEntries?.length) {
+            playerEntries.forEach((p) => {
+                if (! p.isPlaying) {
+                    p.btnPlay.click();
+                }
+            });
+        } */
+        
+        //Estrategia para iniciar una fila a la vez. En este caso Object.values aparentemente devuelve los valores sin un orden específico o tal vez por el key nummérico real, lo que hace que
+        //se inicieel total de players equivalente a una file pero visualmente se ve random
         let playersPromises = [];
 
-        for (let i = 0; i < playersObj.play.length; i++) {
-            if ((! (i % configOptions.gridSize) || i == playersObj.play.length - 1) && playersPromises.length) {
+        for (let i = 0; i < playerEntries.length; i++) {
+            const entry = playerEntries[i];
+
+            //Si hay promesas por cumplir y estas suman una fila del grid o es la última fila del grid, esperamos las promesas
+            if (playersPromises.length && (! (i % configOptions.gridSize) || i == playerEntries.length - 1)) {
                 const result = await Promise.all(playersPromises);
 
                 playersPromises = [];
             }
 
-            const data = playersObj.play[i]?.$el?.data;
-
-            if (! data?.isPlaying) {
-                playersPromises.push(data.playStopStream());
+            if (! entry?.isPlaying && entry?.playStopFnc) {
+                playersPromises.push(entry.playStopFnc());
             }
         }
 

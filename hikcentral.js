@@ -23,9 +23,9 @@
         previewURLs: '/artemis/api/video/v2/cameras/previewURLs',
         previewURL: '/artemis/api/video/v1/cameras/previewURLs',
         capture: '/artemis/api/video/v1/camera/capture',
-        ptz: '/artemis/api/video/v1/ptzs/controlling',
         presets: '/artemis/api/video/v1/presets/searches',
         patrols: '/artemis/api/video/v1/patrols/searches',
+        ptz: '/artemis/api/video/v1/ptzs/controlling',
         areas: '/artemis/api/resource/v1/regions',
 		area: '/artemis/api/resource/v1/region/indexCode/regionInfo'
     }
@@ -528,74 +528,6 @@
         return cameraListResult;
     }
 
-    const getCamera = async (indexCode = '') => {
-        if (! indexCode || ! ['string', 'number'].includes(typeof indexCode) || ('string' === typeof indexCode && ! indexCode.trim())) {
-            return getInvalidIndexCodeObject();
-        }
-
-        params.camera.body = JSON.stringify({cameraIndexCode: indexCode.toString()});
-        
-        /*
-        Returns an object like this one:
-        {
-			"res": {},
-			"httpStatusCode": 200,
-			"httpStatusText": "OK",
-			"status": "success",
-			"data": {
-				"code": "0",
-				"msg": "Success",
-				"cameraIndexCode": "621",
-				"cameraName": " GARITA",
-				"capabilitySet": "event_pdc",
-				"devResourceType": "encodeDevice",
-				"cameraGuid": "A2179757AEE14A6BB248344C08650C2C",
-				"encodeDevIndexCode": "81",
-				"recordType": "0",
-				"recordLocation": "1",
-				"regionIndexCode": "25",
-				"siteIndexCode": "0",
-				"status": 1,
-				"isSupportWakeUp": 0,
-				"wakeUpStatus": 0
-			},
-			"headers": {
-				"cache-control": "no-cache",
-				"connection": "keep-alive",
-				"content-encoding": "gzip",
-				...More headers
-			},
-			"ok": true
-		}
-        */
-        return await runFetch(apiServerUrl + endpoints.camera, params.camera, true);
-    }
-
-    const getCameraStatus = async (indexCode = '') => {
-        const cameraData = await getCamera(indexCode);
-
-        if (cameraData?.data?.status) { cameraData.data = cameraData.data.status; }
-
-        /*
-        Returns an object like this one:
-        {
-			"res": {},
-			"httpStatusCode": 200,
-			"httpStatusText": "OK",
-			"status": "success",
-			"data": 1,
-			"headers": {
-				"cache-control": "no-cache",
-				"connection": "keep-alive",
-				"content-encoding": "gzip",
-				...More headers
-			},
-			"ok": true
-		}
-        */
-        return cameraData;
-    }
-
     const getCamerasPreviewURLs = async (indexCodes = '', protocol = 'websocket', checkForMax = true) => {
         const protocols = ['rtsp', 'websocket', 'rtsp_s', 'websocket_s', 'hls', 'rtmp'];
         const invalidIndexMsg = getInvalidIndexCodeObject();
@@ -698,6 +630,74 @@
 		}
         */
         return previewURLsResults?.[0] || {};
+    }
+
+    const getCamera = async (indexCode = '') => {
+        if (! indexCode || ! ['string', 'number'].includes(typeof indexCode) || ('string' === typeof indexCode && ! indexCode.trim())) {
+            return getInvalidIndexCodeObject();
+        }
+
+        params.camera.body = JSON.stringify({cameraIndexCode: indexCode.toString()});
+        
+        /*
+        Returns an object like this one:
+        {
+			"res": {},
+			"httpStatusCode": 200,
+			"httpStatusText": "OK",
+			"status": "success",
+			"data": {
+				"code": "0",
+				"msg": "Success",
+				"cameraIndexCode": "621",
+				"cameraName": " GARITA",
+				"capabilitySet": "event_pdc",
+				"devResourceType": "encodeDevice",
+				"cameraGuid": "A2179757AEE14A6BB248344C08650C2C",
+				"encodeDevIndexCode": "81",
+				"recordType": "0",
+				"recordLocation": "1",
+				"regionIndexCode": "25",
+				"siteIndexCode": "0",
+				"status": 1,
+				"isSupportWakeUp": 0,
+				"wakeUpStatus": 0
+			},
+			"headers": {
+				"cache-control": "no-cache",
+				"connection": "keep-alive",
+				"content-encoding": "gzip",
+				...More headers
+			},
+			"ok": true
+		}
+        */
+        return await runFetch(apiServerUrl + endpoints.camera, params.camera, true);
+    }
+
+    const getCameraStatus = async (indexCode = '') => {
+        const cameraData = await getCamera(indexCode);
+
+        if (cameraData?.data?.status) { cameraData.data = cameraData.data.status; }
+
+        /*
+        Returns an object like this one:
+        {
+			"res": {},
+			"httpStatusCode": 200,
+			"httpStatusText": "OK",
+			"status": "success",
+			"data": 1,
+			"headers": {
+				"cache-control": "no-cache",
+				"connection": "keep-alive",
+				"content-encoding": "gzip",
+				...More headers
+			},
+			"ok": true
+		}
+        */
+        return cameraData;
     }
 
     const getCameraPreviewURL = async (indexCode = '', protocol = 'websocket') => {
@@ -1486,9 +1486,9 @@
             getEncodeDevices,
 			getEncodeDevice,
             getCameras,
+            getCamerasPreviewURLs,
             getCamera,
             getCameraStatus,
-            getCamerasPreviewURLs,
             getCameraPreviewURL,
             getCameraCapture,
             getPTZPresets,

@@ -77,7 +77,7 @@
         filtered: []
     };
     const filtersObj = {
-        favorites: [['favorite', 'Favorito']],
+        favorites: [['favorites', 'Favoritos']],
         capabilities: [],
         devices: [],
         areas: [],
@@ -472,7 +472,7 @@
                         if (! capture?.data?.length || capture?.data?.code) {
                             vpStatus.streamError = true;
 
-                            showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
+                            //showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
                         } else {
                             vpStatus.streamError = false;
 

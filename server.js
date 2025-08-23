@@ -29,6 +29,7 @@
     const captureMinTimeBetweenUpdates = process.env.MIN_TIME_BETWEEN_CAPTURE_UPDATES || 1 * 60 * 60 * 1000;//Una hora
     const publicFolder = 'public/';
     const capturesubFolder = 'img/captures/';
+    const dataUriFileType = 'data:image/jpeg;base64,';
 
     const endpoints = {
         auth: '/auth/login',
@@ -351,6 +352,16 @@
 
             fileData.exists = true;
             fileData.expired = Date.now() - stats.birthtimeMs > captureMinTimeBetweenUpdates;
+
+            if (fileData.exists && ! fileData.expired) {
+                const fileBuffer = await fs.readFile(fileData.path);
+                const base64String = fileBuffer.toString('base64');
+
+                res.writeHead(200, jsonHeader);
+                res.end(`${dataUriFileType}${base64String}`);
+
+                return true;
+            }
         } catch (err) {
             if (err.code === 'ENOENT') {
                 //console.log(`File ${fileData.path} does not exist.`);
@@ -361,26 +372,34 @@
             fileData.exists = false;
         }
 
-        if (fileData.exists && ! fileData.expired) {
-            res.writeHead(200, jsonHeader);
-            res.end(fileData.publicPath);
-
-            return true;
-        }
-
         const result = await hikcentral.getCameraCapture(id);
 
         if (result?.data?.data?.length) {
-            //data:image/jpeg;base64,
-            const base64Data = result.data.data.replace(/^data:image\/jpeg;base64,/, '');
+            const base64Data = result.data.data.replace(dataUriFileType, '');
             const binaryData = Buffer.from(base64Data, 'base64');
 
             try {
                 await fs.writeFile(fileData.path, binaryData);
 
-                result.data.data = fileData.publicPath;
+                res.writeHead(200, jsonHeader);
+                res.end(result.data.data);
+
+                return true;
             } catch (err) {
-                if (fileData.exists) { result.data.data = fileData.publicPath; }
+                if (err.code === 'ENOENT') {
+                    //console.log(`File ${fileData.path} does not exist.`);
+                } else {
+                    console.error('An error occurred:', err);
+                }
+            }
+        } else {
+            if (fileData.exists) {
+                console.log(777);
+
+                res.writeHead(200, jsonHeader);
+                res.end(fileData.publicPath);
+    
+                return false;
             }
         }
 

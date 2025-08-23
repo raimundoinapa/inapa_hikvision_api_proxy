@@ -380,11 +380,6 @@
 
             try {
                 await fs.writeFile(fileData.path, binaryData);
-
-                res.writeHead(200, jsonHeader);
-                res.end(result.data.data);
-
-                return true;
             } catch (err) {
                 if (err.code === 'ENOENT') {
                     //console.log(`File ${fileData.path} does not exist.`);
@@ -392,19 +387,10 @@
                     console.error('An error occurred:', err);
                 }
             }
-        } else {
-            if (fileData.exists) {
-                console.log(777);
-
-                res.writeHead(200, jsonHeader);
-                res.end(fileData.publicPath);
-    
-                return false;
-            }
         }
 
-        res.writeHead(result?.httpStatusCode || 200, jsonHeader);
-        res.end(result?.data?.data || '');
+        res.writeHead(200, jsonHeader);
+        res.end(result?.data?.data || (! fileData.exists ? '' : fileData.publicPath));
     });
 
     http.post(endpoints.protected.presets, async (req, res) => {

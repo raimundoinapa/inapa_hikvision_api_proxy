@@ -726,8 +726,8 @@
             to: totalPages < maxVisiblePaginationButtons ? totalPages : maxVisiblePaginationButtons
         };
         const paginationForm = create('form', {is: 'super-form'}, {className: 'd-flex-center gap0-5 mb1'});
-        const prevButton = create('a-button', {info: true}, {'aria-label': 'Previous', innerHTML: 'Previous'});
-        const nextButton = create('a-button', {info: true}, {'aria-label': 'Next', innerHTML: 'Next'});
+        const prevButton = create('a-button', {info: true}, {'aria-label': 'Anterior', innerHTML: 'Anterior'});
+        const nextButton = create('a-button', {info: true}, {'aria-label': 'Siguiente', innerHTML: 'Siguiente'});
 
         if (isMultipleRenders) {
             if ((configOptions.currentPage + maxPreviousOrNextNumbers) >= maxVisiblePaginationButtons) {

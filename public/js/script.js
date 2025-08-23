@@ -471,7 +471,7 @@
                             timeout: 10000
                         });
 
-                        if (! capture?.data?.length || capture?.data?.code) {
+                        if (! capture?.data || capture?.data?.code) {
                             vpStatus.streamError = true;
 
                             //showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
@@ -479,6 +479,10 @@
                             vpStatus.streamError = false;
 
                             capturedPicture = capture.data;
+
+                            if ("image/jpeg" == capture?.headers?.['content-type']) {
+                                capturedPicture = URL.createObjectURL(capture.data);
+                            }
                         }
                     }
                 } else {
@@ -498,7 +502,7 @@
                     }
                 }
 
-                if  (capturedPicture) {
+                if  (capturedPicture) {                    
                     camera.capture = capturedPicture;
                     camera.captureTimestamp = timeStamp;
                     dbRequest._put('cameras', camera);
@@ -561,7 +565,8 @@
 
                         imNotBusy();
 
-                        takePicture();
+                        //Tomamos la foto en un timeout poque la imagen tarde un poquito en aparecer
+                        setTimeout(() => { takePicture(); }, 500);
 
                         console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
                     } catch(err) {

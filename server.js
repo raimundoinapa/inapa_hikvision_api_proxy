@@ -346,6 +346,8 @@
             exists: false,
             expired: false
         }
+        //const imageHeader = { 'Content-Type': 'image/jpeg' };
+        const imageHeader = jsonHeader;//Aquí vamos a mandar todo como json para evitar que runFetch convierta el base64 en un blob en el frontend
 
         try {
             const stats = await fs.stat(fileData.path);
@@ -353,11 +355,11 @@
             fileData.exists = true;
             fileData.expired = Date.now() - stats.birthtimeMs > captureMinTimeBetweenUpdates;
 
-            if (fileData.exists && ! fileData.expired) {
+            if (! fileData.expired) {
                 const fileBuffer = await fs.readFile(fileData.path);
                 const base64String = fileBuffer.toString('base64');
 
-                res.writeHead(200, jsonHeader);
+                res.writeHead(200, imageHeader);
                 res.end(`${dataUriFileType}${base64String}`);
 
                 return true;
@@ -381,16 +383,17 @@
             try {
                 await fs.writeFile(fileData.path, binaryData);
             } catch (err) {
-                if (err.code === 'ENOENT') {
-                    //console.log(`File ${fileData.path} does not exist.`);
-                } else {
-                    console.error('An error occurred:', err);
-                }
+                console.error('Error writing file:', err);
             }
+
+            res.writeHead(200, imageHeader);
+            res.end(result.data.data);
+
+            return true;
         }
 
-        res.writeHead(200, jsonHeader);
-        res.end(result?.data?.data || (! fileData.exists ? '' : fileData.publicPath));
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(! fileData.exists ? '' : fileData.publicPath);
     });
 
     http.post(endpoints.protected.presets, async (req, res) => {

@@ -1,3 +1,5 @@
+//Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
+//Documentación leida:
 //https://www.30secondsofcode.org/articles/s/nodejs-static-file-server
 //https://www.fabiofranchino.com/blog/use-electron-as-local-webserver/
 //https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types

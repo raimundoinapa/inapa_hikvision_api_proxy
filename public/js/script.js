@@ -1,3 +1,5 @@
+//Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
+ 
 (async () => {
     const {app, q, create, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
     const apiServerProtocol = 'http';
@@ -335,13 +337,13 @@
 
             videoPlayerWrapper.innerHTML = `
                 <div class="refresh-btn-container">
-                    <a-button icon circle id="refresh-${camera.cameraIndexCode}" aria-label="Recargar Cámera" disabled><an-icon refresh></an-icon></a-button>
+                    <a-button icon circle id="refresh-${camera.cameraIndexCode}" aria-label="Recargar Cámera" disabled class="${! isOnline ? '' : 'd-none'}"><an-icon refresh></an-icon></a-button>
                 </div>
                 <div class="video-controls">
                     <div class="buttons">
                         <a-button icon circle id="play-stop-${camera.cameraIndexCode}" aria-label="Play" disabled><span style="font-size: 1rem; margin:0 0 3px 2px">▶</span></a-button>
                         <a-button icon circle id="capure-${camera.cameraIndexCode}" aria-label="Tomar Foto" disabled><an-icon camera></an-icon></a-button>
-                        <a-button icon circle id="ptz-${camera.cameraIndexCode}" aria-label="Comandos PTZ" disabled>
+                        <a-button icon circle id="ptz-${camera.cameraIndexCode}" aria-label="Comandos PTZ" disabled class="${! isPTZ ? 'd-none' : ''}">
                             <style>
                                 .controller {
                                     width: 15px;
@@ -477,8 +479,6 @@
                             vpStatus.streamError = false;
 
                             capturedPicture = capture.data;
-
-                            console.log('Foto remota tomada a', camera.cameraIndexCode, timeStamp);
                         }
                     }
                 } else {
@@ -492,7 +492,7 @@
                     capturedPicture = canvas.toDataURL('image/png');
 
                     if (download) {
-                        const link = create('a', {href: dataUrl, download: `${camera.cameraIndexCode}_capture_${timeStamp}.png`});
+                        const link = create('a', {href: capturedPicture, download: `${camera.cameraIndexCode}_capture_${timeStamp}.png`});
     
                         link.click();
                     }
@@ -561,17 +561,17 @@
 
                         imNotBusy();
 
-                        console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
-
                         takePicture();
+
+                        console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
                     } catch(err) {
                         vpStatus.streamError = true;
-
-                        console.error(err);
                         
                         showSnackbar(`No se pudo inicar la transmisión de la cámara ${camera.cameraIndexCode}`, 'warning');
 
                         imNotBusy();
+
+                        console.error(err);
                     }
                 } else {
                     console.log(`Deteniendo transmisión de cámara ${camera.cameraIndexCode}`);
@@ -589,9 +589,9 @@
 
                         imNotBusy();
                     } catch (err) {
-                        console.error(err);
-
                         imNotBusy();
+
+                        console.error(err);
                     }
                 }
 
@@ -695,11 +695,11 @@
                         await takePicture();
     
                         if (! camera?.captureTimestamp && ! vpStatus.captureRetry) {
-                            console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
-    
                             takePicture();
     
                             vpStatus.captureRetry = true;
+
+                            console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
                         }
                     })();
                 }
@@ -868,7 +868,7 @@
         if (! configOptions.lastDBUpdate) {
             showSnackbar(`<h2>Instalando</h2><p>Actualizando base de datos...</p>`, 'info');
         } else {
-            showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. Ejecutaremos una nueva actualización</p>`, 'info');
+            showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. <br>Ejecutaremos una nueva actualización</p>`, 'info');
         }
 
         dataObj.remote = await runFetch(apiServerUrl + endpoints.protected.integral, {

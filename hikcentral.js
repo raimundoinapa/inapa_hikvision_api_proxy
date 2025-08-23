@@ -1,3 +1,5 @@
+//Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
+ 
 (async () => {
     const nodeEnv = 'undefined' != typeof process ? process : {};
 

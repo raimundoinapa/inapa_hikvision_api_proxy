@@ -1,7 +1,10 @@
+//Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
+
 (async () => {
     // Load environment variables
     require('dotenv').config();
     
+    const fs = require('fs').promises;
     const jwt = require('jsonwebtoken');
     const bcrypt = require('bcryptjs');
     const httpServer = require("./http-server.js");
@@ -21,6 +24,11 @@
         }
     ];
     const additionalUsers = process.env.ADDITIONAL_USERS;
+
+    const dbMinTimeBetweenUpdates = process.env.MIN_TIME_BETWEEN_UPDATES || 3 * 60 * 60 * 1000;//Tres horas
+    const captureMinTimeBetweenUpdates = process.env.MIN_TIME_BETWEEN_CAPTURE_UPDATES || 1 * 60 * 60 * 1000;//Una hora
+    const publicFolder = 'public/';
+    const capturesubFolder = 'img/captures/';
 
     const endpoints = {
         auth: '/auth/login',
@@ -331,7 +339,50 @@
 
     http.post(endpoints.protected.capture, async (req, res) => {
         const {id} = req?._dataBody;
+        const fileData = {
+            path: `${publicFolder}${capturesubFolder}${id}.jpeg`,
+            publicPath: `${capturesubFolder}${id}.jpeg`,
+            exists: false,
+            expired: false
+        }
+
+        try {
+            const stats = await fs.stat(fileData.path);
+
+            fileData.exists = true;
+            fileData.expired = Date.now() - stats.birthtimeMs > captureMinTimeBetweenUpdates;
+        } catch (err) {
+            if (err.code === 'ENOENT') {
+                //console.log(`File ${fileData.path} does not exist.`);
+            } else {
+                console.error('An error occurred:', err);
+            }
+
+            fileData.exists = false;
+        }
+
+        if (fileData.exists && ! fileData.expired) {
+            res.writeHead(200, jsonHeader);
+            res.end(fileData.publicPath);
+
+            return true;
+        }
+
         const result = await hikcentral.getCameraCapture(id);
+
+        if (result?.data?.data?.length) {
+            //data:image/jpeg;base64,
+            const base64Data = result.data.data.replace(/^data:image\/jpeg;base64,/, '');
+            const binaryData = Buffer.from(base64Data, 'base64');
+
+            try {
+                await fs.writeFile(fileData.path, binaryData);
+
+                result.data.data = fileData.publicPath;
+            } catch (err) {
+                if (fileData.exists) { result.data.data = fileData.publicPath; }
+            }
+        }
 
         res.writeHead(result?.httpStatusCode || 200, jsonHeader);
         res.end(result?.data?.data || '');

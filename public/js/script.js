@@ -31,6 +31,7 @@
         }
     };
     
+    const maxFailedTokenCount = 3;
     const appLoadTimestamp = new Date().getTime();
     const dbMinTimeBetweenUpdates = 3 * 60 * 60 * 1000;//Tres horas
     const captureMinTimeBetweenUpdates = 1 * 60 * 60 * 1000;//Una hora
@@ -69,6 +70,7 @@
         gridSize: Object.keys(gridOptions).sort((a, b) => b - a)[0],
         currentPage: 1,
         lastDBUpdate: '',
+        invalidTokenCount: 0
     };
     const cameraCount = {online: 0, offline: 0};
     const specialFilterStoreNames = ['filterFavorites', 'filterCapabilities', 'filterDevices', 'filterAreas'];
@@ -166,16 +168,36 @@
         //const authToken = { data: {username: 'admin', token: 'asdfadfasdfasd'}};
     
         if (! authToken?.data?.token) {
-            console.error('Error de autenticación');
-    
             showSnackbar('Error de autenticación', 'warning');
+
+            console.error('Error de autenticación');
     
             return false;
         }
     
+        configOptions.invalidTokenCount = 0;
         configOptions.username = authToken.data.username;
         configOptions.token = authToken.data.token;
         saveConfig();
+
+        return true;
+    }
+
+    const isAllowed = (res) => {
+        if (403 == res?.httpStatusCode) {
+            configOptions.invalidTokenCount++;
+            saveConfig();
+
+            if (configOptions.invalidTokenCount < maxFailedTokenCount) { window.location.reload(); }
+
+            const invalidCredentialsMsg = 'Credenciales de autenticación inválidas, póngase en contacto con el administrador';
+
+            showSnackbar(invalidCredentialsMsg, 'warning');
+
+            console.error(invalidCredentialsMsg);
+
+            return false;
+        }
 
         return true;
     }
@@ -283,19 +305,29 @@
         if (pageJump) { pageJump.disabled = false; }
     }
     
-    const stopAllPlayers = () => {
+    const stopAllPlayers = async () => {
         const playerEntries = Object.values(playersStatus);
 
-        if (playerEntries?.length) {
-            playerEntries.forEach((p) => {
-                if (p.isPlaying) {
-                    p.btnPlay.click();
-                }
-            });
+        if (! playerEntries?.length) { return false; }
+
+        const playersPromises = [];
+
+        for (let i = 0; i < playerEntries.length; i++) {
+            const entry = playerEntries[i];
+
+            if (entry?.isPlaying && entry?.playStopFnc) {
+                playersPromises.push(entry.playStopFnc());
+            }
         }
+
+        if (! playersPromises.length) { return false; }
+
+        await Promise.all(playersPromises);
+
+        return true;
     }
 
-    const createGrid = async () => {
+    const createGrid = async () => {        
         gridContainer.innerHTML = '';
         
         if (! dataObj.filtered.length) {
@@ -305,8 +337,6 @@
         }
 
         gridContainer.appendChild(gridPreloader);
-
-        stopAllPlayers();
         
         //Limpiamos todo
         Object.keys(playersStatus).forEach(p => delete playersStatus[p]);
@@ -391,7 +421,6 @@
 
             playersStatus[camera.cameraIndexCode] = {
                 isOnline,
-                btnPlay,
                 JSPlugin: false,
                 videoPlayer: {},
                 isPlaying: false,
@@ -471,7 +500,7 @@
                             timeout: 10000
                         });
 
-                        if (! capture?.data || capture?.data?.code) {
+                        if (! isAllowed(capture) || ! capture?.data || capture?.data?.code) {
                             vpStatus.streamError = true;
 
                             //showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
@@ -674,7 +703,7 @@
                     timeout: 10000
                 });
 
-                if (cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
+                if (isAllowed(capture) && cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
                     vpStatus.isOnline = true;
 
                     if (camera?.captureTimestamp && camera?.capture) {
@@ -834,6 +863,8 @@
         disableForm(toolsForm);
         disableForm(filtersDialog.$el['filters-form']);
 
+        await stopAllPlayers();
+
         await filterData();
 
         await createGrid();
@@ -843,18 +874,7 @@
         enableForm(filtersDialog.$el['filters-form']);
     }
 
-    if (configOptions.token) {
-        const authCheck = await runFetch(apiServerUrl + endpoints.protected.authCheck, {
-            method: 'POST',
-            headers: {
-                authorization: `Bearer ${configOptions.token}`
-            }
-        });
-
-        if ('success' != authCheck?.status) {
-            if (! await login()) { return false; }
-        }
-    } else {
+    if (! configOptions.token) {
         if (! await login()) { return false; }
 
         const version = await runFetch(apiServerUrl + endpoints.protected.version, {
@@ -863,8 +883,19 @@
                 authorization: `Bearer ${configOptions.token}`
             }
         });
-
+        
         console.log(version);
+    }
+
+    const authCheck = await runFetch(apiServerUrl + endpoints.protected.authCheck, {
+        method: 'POST',
+        headers: {
+            authorization: `Bearer ${configOptions.token}`
+        }
+    });
+
+    if (! isAllowed(authCheck) || 'success' != authCheck?.status) {   
+        if (! await login()) { return false; }
     }
 
     dataObj.local = await dbRequest._getAll('cameras');
@@ -1158,14 +1189,6 @@
         disableForm(toolsForm);
         disableForm(filtersDialog.$el['filters-form']);
         disablePagination();
-
-        /* if (playerEntries?.length) {
-            playerEntries.forEach((p) => {
-                if (! p.isPlaying) {
-                    p.btnPlay.click();
-                }
-            });
-        } */
         
         //Estrategia para iniciar una fila a la vez. En este caso Object.values aparentemente devuelve los valores sin un orden específico o tal vez por el key nummérico real, lo que hace que
         //se inicieel total de players equivalente a una file pero visualmente se ve random

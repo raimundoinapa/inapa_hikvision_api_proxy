@@ -65,3 +65,6 @@ ssl/
 *.crt
 *.pfx
 *.p12
+
+# Captures
+public/img/captures

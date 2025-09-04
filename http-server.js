@@ -8,6 +8,7 @@
 class httpServer {
     constructor(options = {protocol: '', ip: '', port: '', root: ''}) {
         const http = require('http');
+        const fs = require('fs');
         const path = require('path');
         
         this.protocol = options.protocol || 'http';
@@ -32,6 +33,8 @@ class httpServer {
             xml: 'application/xml',
             pdf: 'application/pdf',
             xls: 'application/vnd.ms-excel',
+            doc: 'application/msword',
+            zip: 'application/zip',
             mp3: 'audio/mpeg',
             mp4: 'video/mp4',
             weba: 'audio/webm',
@@ -41,115 +44,253 @@ class httpServer {
             woff: 'font/woff',
             woff2: 'font/woff2',
             wasm: 'application/wasm',
-            octetStream: 'application/octet-stream',
-            rowBinaryData: 'multipart/form-data'
+            octetStream: 'application/octet-stream',//Para cualquier tipo de archivo binario
         };
-        this.RESTful = ['get', 'post', 'put', 'patch', 'delete', 'options'];//Similar a Create, Read, Update, Delete (CRUD)
+        this.RESTful = ['get', 'post', 'put', 'patch', 'delete', 'options'];
+        this.maxPostSize = process.env.MAX_POST_SIZE || 10 * 1024 * 1024;//10MB
         this.sockets = [];
-        this.getEndpoints = {};
-        this.postEndpoints = {};
         this.middlewares = [];
-        this.server = http.createServer(async (req, res) => {
-            const fs = require('fs');
 
-            const getQueryStringEntries = (qs) => {
-                const sp = new URLSearchParams(qs);
-                const entries = {};
+        //this.getEndpoints = {}
+        //this.get = (endpoint = '', fnc = () => {}) => {
+            //this.getEndpoints[endpoint] = fnc;
+        //}
+        for (let r = 0; r < this.RESTful.length; r++) {
+            const verb = this.RESTful[r];
 
-                for(const e of sp.entries()) { entries[e[0]] = e[1]; }
+            this[`${verb}Endpoints`] = {};
 
-                return entries;
+            this[verb] = (endpoint = '', fnc = () => {}) => {
+                this[`${verb}Endpoints`][endpoint] = fnc;
             }
-            
-            const getPostBody = () => {
-                return new Promise((resolve) => {
-                    let chunks = [];
-                    let dataObj = {};
-        
-                    //El evento 'data' se ejecuta cada vez que se recibe un trozo de información. La almacenamos en un array.
-                    req.on("data", (chunk) => { chunks.push(chunk); });
-        
-                    //El evento 'end' se ejecuta cuando se han recibido todos los trozos de información
-                    req.on("end", () => {
-                        const data = Buffer.concat(chunks);//Creamos un Buffer con todos los trozos de información (lo mismo que Buffer.from(chunks.join("")))
-        
-                        const bufferString = data.toString();//Convertimos el buffer en una cadena parecida al querystring en una URL
-        
-                        //const parsedData = new URLSearchParams(bufferString);//Convertimos el querystring en un objeto para iterarlo (lo mismo que xxx)
-        
-                        //for (let pair of parsedData.entries()) { dataObj[pair[0]] = pair[1]; }
-        
-                        //if (dataObj) { resolve(dataObj); }
+        }
 
-                        if (bufferString) {
-                            try {
-                                const result = JSON.parse(bufferString);
+        this.use = (middleware) => {
+            this.middlewares.push(middleware);
+        };
 
-                                resolve(result);
-                            } catch(e) {
-                                //console.log(e);
-                            } finally {}
-                            
-                            resolve(bufferString);
-                        }
+        this.getQueryStringEntries = (qs) => {
+            const entries = {};
+
+            if (! qs) { return entries; }
+
+            const sp = new URLSearchParams(qs);
+
+            for(const e of sp.entries()) { entries[e[0]] = e[1]; }
+
+            return entries;
+        }
         
-                        resolve(false);
-                    });
+        this.getPostBody = (req) => {
+            return new Promise((resolve) => {
+                let totalSize = 0;
+                let chunks = [];
+                let dataObj = {};
+    
+                //El evento 'data' se ejecuta cada vez que se recibe un trozo de información. La almacenamos en un array.
+                req.on("data", (chunk) => {
+                    totalSize += chunk.length;
+                    
+                    if (totalSize > this.maxPostSize) {
+                        return resolve({httpStatusCode: 413});
+                    }
+                    
+                    chunks.push(chunk);
                 });
-            }
+    
+                //El evento 'end' se ejecuta cuando se han recibido todos los trozos de información
+                req.on("end", () => {
+                    const data = Buffer.concat(chunks);//Creamos un Buffer con todos los trozos de información (lo mismo que Buffer.from(chunks.join("")))
 
+                    if (req._isFileUpload) {
+                        const boundaryMatch = req._contentType.match(/boundary=(.+)$/);
+                        
+                        if (! boundaryMatch) {
+                            //Aquí req._contentType es un application/octet-stream o algo como image/jpeg, etc. con x-file-name, x-file-size, etc.
+                            //fs.writeFileSync(filepath, data);
+                        } else {
+                            //Lógica de bounderies para multipart/form-data
+                            //const boundary = boundaryMatch[1];
+                            //const parts = [];
+                            //const boundaryBuffer = Buffer.from(`--${boundary}`);
+                            //const endBoundaryBuffer = Buffer.from(`--${boundary}--`);
+                        }                        
+
+                        return resolve(data);
+                    }
+    
+                    const bufferString = data.toString();//Convertimos el buffer en una cadena parecida al querystring en una URL
+    
+                    //const parsedData = new URLSearchParams(bufferString);//Convertimos el querystring en un objeto para iterarlo
+    
+                    //for (let pair of parsedData.entries()) { dataObj[pair[0]] = pair[1]; }
+    
+                    //if (dataObj) { resolve(dataObj); }
+
+                    if (bufferString) {
+                        try {
+                            const result = JSON.parse(bufferString);
+
+                            return resolve(result);
+                        } catch(e) {
+                            //console.log(e);
+                        } finally {}
+                        
+                        return resolve(bufferString);
+                    }
+    
+                    return resolve(false);
+                });
+            });
+        }
+
+        this.server = http.createServer(async (req, res) => {
             let middlewareIndex = 0;
 
-            const urlQuery = /\?/.test(req.url) ? req.url.split('?') : [];
-
-            req._url = ! /\/$/.test(req.url) ? ! urlQuery?.length ? req.url : urlQuery[0] : req.url + 'index.html';//Si el request termina en / asumimos que es un index.html
-            req._qsEntries = ! urlQuery?.length || ! urlQuery[1] ? {} : getQueryStringEntries(urlQuery[1]);
-            req._isPost = 'get' != req.method.toLowerCase();
+            req._method = req.method.toLowerCase();
+            req._url = ! /\/$/.test(req.url) ? req.url.split('?')?.[0] : req.url + 'index.html';//Si el request termina en / asumimos que es un index.html
+            req._qs = req.url.split('?')?.[1] || '';
+            req._qsEntries = this.getQueryStringEntries(req._qs);
+            req._isPost = 'get' != req._method;
             req._isBackendRequest = req._isPost || Object.keys(req._qsEntries);
             req._filePath = path.join(this.public, req._url);
             req._fileName = path.basename(req._url);
             req._extension = req._fileName && /\./.test(req._fileName) ? path.extname(req._fileName).slice(1) : '';//Le quita el punto a la extensión
-            req._fileType = this.mimeTypes[Object.keys(this.mimeTypes)[Object.values(this.mimeTypes).indexOf(req.headers['content-type'])]] || this.mimeTypes[req._extension] || this.mimeTypes.octetStream;
-            req._isFileUpload = req._isPost && (req._fileType == this.mimeTypes.octetStream || req._fileType == this.mimeTypes.rowBinaryData);
-            req._RESTfulType = this.RESTful[this.RESTful.indexOf(req.method.toLowerCase())];
-            req._dataBody = ! req._isPost ? req._qsEntries : await getPostBody();
+            req._fileType = this.mimeTypes?.[req._extension] || this.mimeTypes?.[Object.keys(this.mimeTypes)[Object.values(this.mimeTypes).indexOf(req.headers['content-type'])]] || this.mimeTypes.octetStream;
+            req._contentType = req.headers['content-type'] || '';
+            req._isFileUpload = req._contentType.startsWith('multipart/form-data') || req._contentType.includes(this.mimeTypes.octetStream) || req.headers['x-file-name'] || req.headers['x-file-size'] || req.headers['x-chunk-index'];
+            req._contentLength = parseInt(req.headers['content-length'] || '0');
+            req._dataBody = ! req._isPost ? req._qsEntries : await this.getPostBody(req);
 
-            //console.log(req.url, req._qsEntries, req._isPost, req._isBackendRequest, req._filePath, req._fileName, req._extension, req._fileType, req._isFileUpload, req._RESTfulType, req._dataBody);
+            //console.log(req._method, req.url, req._qs, req._qsEntries, req._isPost, req._isBackendRequest, req._filePath, req._fileName, req._extension, req._fileType, req._contentType, req._isFileUpload, req._contentLength, req._dataBody);
 
-            if ('options' == req._RESTfulType) {
+            /*
+            //Ejemplo de formulario para subir un archivo
+
+            <form action="/upload" method="post" enctype="multipart/form-data" target="formResult">
+                <input type="file" name="file" id="file">
+                <input type="text" name="description" id="description">
+                <button type="submit">Upload</button>
+            </form>
+
+            <script>
+                document.getElementById('file').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+
+                    if (! file) { return; }
+
+                    const formData = new FormData();
+                
+                    formData.append('file', file);
+                    formData.append('description', 'Description of the file');
+
+                    //Enviando el formData con fetch
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        //
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                    }
+
+                    //Enviando el formData con XMLHttpRequest
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/upload', true);
+                    xhr.upload.onprogress = function(e) {
+                        if (e.lengthComputable) {
+                            const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        }
+                    };
+                    xhr.onload = function() {};
+                    xhr.onerror = function() {};
+                    xhr.send(formData);
+
+                    //Enviando el file con fetcha row
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': file.type,
+                                'X-File-Name': file.name,
+                                'X-File-Size': file.size.toString()
+                            },
+                            body: file
+                        });
+
+                        //
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                    }
+                });
+            </script>
+            */
+
+            req.on('error', (error) => {
+                console.error('Request error:', error);
+
+                req.destroy();
+
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    status: 'fail',
+                    message: 'Request error'
+                }));
+
+                return;
+            });
+
+            if ('options' == req._method) {
                 res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+                res.setHeader('Access-Control-Allow-Methods', this.RESTful.join(', ').toUpperCase());
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-File-Name, X-File-Size, X-Chunk-Index, X-Total-Chunks');
                 res.writeHead(200);//Enviamos HTTP 200 para el preflight
                 res.end();
 
                 return;
             }
 
+            if ((req?._contentLength && req._contentLength > this.maxPostSize) || 413 == req?._dataBody?.httpStatusCode) {
+                req.destroy();
+                
+                res.writeHead(413, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                    status: 'fail',
+                    message: `Post size exceeds maximum limit of ${this.maxPostSize / 1024 / 1024}MB`
+                }));
+
+                return;
+            }
+            
             const next = () => {
+                if (! req) { return; }
+
                 if (middlewareIndex < this.middlewares.length) {
                     this.middlewares[middlewareIndex++](req, res, next);
                 } else {
-                    if (req._isPost && this.postEndpoints[req._url]) {
-                        this.postEndpoints[req._url](req, res);
-        
-                        return;
-                    }
-        
-                    if (! req._isPost && this.getEndpoints[req._url]) {
-                        this.getEndpoints[req._url](req, res);
-        
-                        return;
-                    }
-        
                     if (this.respond) {
                         this.respond(req, res);//Extender la clase añadiendo funcionalidad a este método
         
                         return;
                     }
+                    
+                    for (let r = 0; r < this.RESTful.length; r++) {
+                        const verb = this.RESTful[r];
+                        const endpoint = this?.[`${verb}Endpoints`]?.[req._url];
+
+                        if (verb == req._method && endpoint) {
+                            //console.log(req._url);
+
+                            endpoint(req, res);
+            
+                            return;
+                        }
+                    }
                 
                     fs.readFile(req._filePath, (err, data) => {
-                        console.log(req._filePath);
+                        //console.log(req._filePath);
                         
                         if (err) {
                             res.writeHead(404, {'Content-Type': 'text/html'});
@@ -158,7 +299,7 @@ class httpServer {
                             return;
                         }
                 
-                        res.writeHead(200, {'Content-Type': req._fileType });
+                        res.writeHead(200, {'Content-Type': req._fileType});
                         res.end(data);
 
                         return;
@@ -169,16 +310,22 @@ class httpServer {
             next();
         });
 
-        this.use = (middleware) => {
-            this.middlewares.push(middleware);
-        };
+        this.quit = () => {
+            console.log(`Closing http server`);
 
-        this.get = (endpoint = '', fnc = () => {}) => {
-            this.getEndpoints[endpoint] = fnc;
-        }
+            return new Promise((resolve) => {
+                this.server.close(() => {
+                    for (const s of this.sockets) {
+                        s.destroy();
+                    }
+    
+                    this.sockets = [];
+    
+                    console.log(`http server closed`);
 
-        this.post = (endpoint = '', fnc = () => {}) => {
-            this.postEndpoints[endpoint] = fnc;
+                    resolve(true);
+                });
+            });
         }
         
         this.run = () => {
@@ -188,27 +335,21 @@ class httpServer {
                 this.server.on('connection', (s) => {
                     this.sockets.push(s);
     
-                    //server.once('close', () => { sockets.delete(socket); });
+                    //this.server.once('close', () => { s.destroy(); });
                 });
             });
-        }
-        
-        this.quit = () => {
-            console.log(`Closing http server`);
 
-            return new Promise((resolve) => {
-                this.server.close(() => {
-                    for (const s of this.sockets) {
-                        s.destroy();
-                        //sockets.delete(socket);
-                    }
-    
-                    this.sockets = [];
-    
-                    console.log(`http server closed`);
+            // Graceful shutdown
+            process.on('SIGTERM', async () => {
+                await this.quit();
 
-                    resolve(true);
-                });
+                process.exit(0);
+            });
+
+            process.on('SIGINT', async () => {
+                await this.quit();
+
+                process.exit(0);
             });
         }
     }

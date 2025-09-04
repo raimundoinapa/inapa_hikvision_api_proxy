@@ -67,4 +67,4 @@ ssl/
 *.p12
 
 # Captures
-public/img/captures
+public/img/captures/

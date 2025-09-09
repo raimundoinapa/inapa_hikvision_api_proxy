@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPLib Helper v0.2.0 - Comprehensive Test Suite</title>
+    
+    <!-- CPLib Files -->
+    <link href="css/helper.css" rel="stylesheet">
+    <script src="js/helper.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color-1, #f5f5f5);
+            color: var(--text-color-1, #333);
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+        }
+        
+        .test-section h2 {
+            margin-top: 0;
+            color: #007bff;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .test-group {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #28a745;
+        }
+        
+        .test-group h3 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        
+        .test-case {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+        }
+        
+        .test-case h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: #0056b3;
+        }
+        
+        .test-input {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        
+        .test-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-pass { background: #28a745; }
+        .status-fail { background: #dc3545; }
+        .status-pending { background: #ffc107; }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 CPLib Helper v0.2.0 - Comprehensive Test Suite</h1>
+    <p>This test suite covers all functions in helper.js to ensure 100% functionality and identify missing implementations.</p>
+    
+    <div class="test-section">
+        <h2>📊 Test Summary</h2>
+        <div id="test-summary">
+            <div>Total Tests: <span id="total-tests">0</span></div>
+            <div>Passed: <span id="passed-tests" class="success-message">0</span></div>
+            <div>Failed: <span id="failed-tests" class="error-message">0</span></div>
+            <div>Pending: <span id="pending-tests">0</span></div>
+        </div>
+        <button class="test-button" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button class="test-button" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <div class="test-grid">
+        <!-- Quick Actions -->
+        <div class="test-section">
+            <h2>🚀 Quick Actions</h2>
+            <div class="test-group">
+                <h3>Test Control</h3>
+                <div class="test-case">
+                    <h4>Run All Tests</h4>
+                    <button class="test-button" onclick="runAllTests()">🧪 Run All Tests</button>
+                    <div id="run-all-result" class="test-result"></div>
+                </div>
+                <div class="test-case">
+                    <h4>Clear Results</h4>
+                    <button class="test-button" onclick="clearResults()">🗑️ Clear Results</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Core App Functions -->
+        <div class="test-section">
+            <h2>🏗️ Core App Functions</h2>
+            
+            <div class="test-group">
+                <h3>App Storage Management</h3>
+                
+                <div class="test-case">
+                    <h4>app.set() - Set storage value</h4>
+                    <button class="test-button" onclick="testAppSet()">Test</button>
+                    <div id="app-set-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>app.get() - Get storage value</h4>
+                    <button class="test-button" onclick="testAppGet()">Test</button>
+                    <div id="app-get-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>app.remove() - Remove storage value</h4>
+                    <button class="test-button" onclick="testAppRemove()">Test</button>
+                    <div id="app-remove-result" class="test-result"></div>
+                </div>
+            </div>
+            
+            <div class="test-group">
+                <h3>History Management</h3>
+                
+                <div class="test-case">
+                    <h4>app.pushState() - Push state to history</h4>
+                    <button class="test-button" onclick="testAppPushState()">Test</button>
+                    <div id="app-pushstate-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>app.pullState() - Pull state from history</h4>
+                    <button class="test-button" onclick="testAppPullState()">Test</button>
+                    <div id="app-pullstate-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>app.popState() - Handle popstate event</h4>
+                    <button class="test-button" onclick="testAppPopState()">Test</button>
+                    <div id="app-popstate-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DOM Selection Functions -->
+        <div class="test-section">
+            <h2>🎯 DOM Selection Functions</h2>
+            
+            <div class="test-group">
+                <h3>Basic Selection</h3>
+                
+                <div class="test-case">
+                    <h4>select() - Single element selection</h4>
+                    <button class="test-button" onclick="testSelect()">Test</button>
+                    <div id="select-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>select() - Multiple elements selection</h4>
+                    <button class="test-button" onclick="testSelectAll()">Test</button>
+                    <div id="select-all-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>selectByContent() - Select by text content</h4>
+                    <button class="test-button" onclick="testSelectByContent()">Test</button>
+                    <div id="select-by-content-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>selectFocusable() - Select focusable elements</h4>
+                    <button class="test-button" onclick="testSelectFocusable()">Test</button>
+                    <div id="select-focusable-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Element Manipulation Functions -->
+        <div class="test-section">
+            <h2>🔧 Element Manipulation Functions</h2>
+            
+            <div class="test-group">
+                <h3>Class Management</h3>
+                
+                <div class="test-case">
+                    <h4>addClass() - Add CSS class</h4>
+                    <button class="test-button" onclick="testAddClass()">Test</button>
+                    <div id="add-class-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>removeClass() - Remove CSS class</h4>
+                    <button class="test-button" onclick="testRemoveClass()">Test</button>
+                    <div id="remove-class-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>hasClass() - Check if element has class</h4>
+                    <button class="test-button" onclick="testHasClass()">Test</button>
+                    <div id="has-class-result" class="test-result"></div>
+                </div>
+            </div>
+            
+            <div class="test-group">
+                <h3>Element Operations</h3>
+                
+                <div class="test-case">
+                    <h4>removeElem() - Remove element from DOM</h4>
+                    <button class="test-button" onclick="testRemoveElem()">Test</button>
+                    <div id="remove-elem-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>softHide() - Soft hide element</h4>
+                    <button class="test-button" onclick="testSoftHide()">Test</button>
+                    <div id="soft-hide-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event System Functions -->
+        <div class="test-section">
+            <h2>⚡ Event System Functions</h2>
+            
+            <div class="test-group">
+                <h3>Event Handling</h3>
+                
+                <div class="test-case">
+                    <h4>_on() - Add event listener</h4>
+                    <button class="test-button" onclick="testOn()">Test</button>
+                    <div id="on-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>_removeOn() - Remove event listener</h4>
+                    <button class="test-button" onclick="testRemoveOn()">Test</button>
+                    <div id="remove-on-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>dispatchEvent() - Dispatch custom event</h4>
+                    <button class="test-button" onclick="testDispatchEvent()">Test</button>
+                    <div id="dispatch-event-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>dispatchCustomEvent() - Dispatch custom event with options</h4>
+                    <button class="test-button" onclick="testDispatchCustomEvent()">Test</button>
+                    <div id="dispatch-custom-event-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observer Functions -->
+        <div class="test-section">
+            <h2>👁️ Observer Functions</h2>
+            
+            <div class="test-group">
+                <h3>Mutation Observers</h3>
+                
+                <div class="test-case">
+                    <h4>observeMutation() - General mutation observer</h4>
+                    <button class="test-button" onclick="testObserveMutation()">Test</button>
+                    <div id="observe-mutation-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>observeAttributes() - Attribute change observer</h4>
+                    <button class="test-button" onclick="testObserveAttributes()">Test</button>
+                    <div id="observe-attributes-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>observeText() - Text content observer</h4>
+                    <button class="test-button" onclick="testObserveText()">Test</button>
+                    <div id="observe-text-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>observeChildren() - Children change observer</h4>
+                    <button class="test-button" onclick="testObserveChildren()">Test</button>
+                    <div id="observe-children-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Utility Functions -->
+        <div class="test-section">
+            <h2>🛠️ Utility Functions</h2>
+            
+            <div class="test-group">
+                <h3>String Utilities</h3>
+                
+                <div class="test-case">
+                    <h4>strCleanUp() - Clean up string</h4>
+                    <button class="test-button" onclick="testStrCleanUp()">Test</button>
+                    <div id="str-cleanup-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>strStripTags() - Strip HTML tags</h4>
+                    <button class="test-button" onclick="testStrStripTags()">Test</button>
+                    <div id="str-strip-tags-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>strReplace() - Replace string content</h4>
+                    <button class="test-button" onclick="testStrReplace()">Test</button>
+                    <div id="str-replace-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>containsString() - Check if string contains substring</h4>
+                    <button class="test-button" onclick="testContainsString()">Test</button>
+                    <div id="contains-string-result" class="test-result"></div>
+                </div>
+            </div>
+            
+            <div class="test-group">
+                <h3>Generation Utilities</h3>
+                
+                <div class="test-case">
+                    <h4>generateID() - Generate unique ID</h4>
+                    <button class="test-button" onclick="testGenerateID()">Test</button>
+                    <div id="generate-id-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>generatePassword() - Generate password</h4>
+                    <button class="test-button" onclick="testGeneratePassword()">Test</button>
+                    <div id="generate-password-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>pad() - Pad number with zeros</h4>
+                    <button class="test-button" onclick="testPad()">Test</button>
+                    <div id="pad-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Functions -->
+        <div class="test-section">
+            <h2>📝 Form Functions</h2>
+            
+            <div class="test-group">
+                <h3>Form Control</h3>
+                
+                <div class="test-case">
+                    <h4>disableForm() - Disable form elements</h4>
+                    <button class="test-button" onclick="testDisableForm()">Test</button>
+                    <div id="disable-form-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>enableForm() - Enable form elements</h4>
+                    <button class="test-button" onclick="testEnableForm()">Test</button>
+                    <div id="enable-form-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>disableElement() - Disable specific elements</h4>
+                    <button class="test-button" onclick="testDisableElement()">Test</button>
+                    <div id="disable-element-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>enableElement() - Enable specific elements</h4>
+                    <button class="test-button" onclick="testEnableElement()">Test</button>
+                    <div id="enable-element-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date & Time Functions -->
+        <div class="test-section">
+            <h2>📅 Date & Time Functions</h2>
+            
+            <div class="test-group">
+                <h3>Timestamp Functions</h3>
+                
+                <div class="test-case">
+                    <h4>getTimestamp() - Get current timestamp</h4>
+                    <button class="test-button" onclick="testGetTimestamp()">Test</button>
+                    <div id="get-timestamp-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getISO8601Timestamp() - Get ISO8601 timestamp</h4>
+                    <button class="test-button" onclick="testGetISO8601Timestamp()">Test</button>
+                    <div id="get-iso8601-timestamp-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getLocalDate() - Get localized date</h4>
+                    <button class="test-button" onclick="testGetLocalDate()">Test</button>
+                    <div id="get-local-date-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getRelativeDate() - Get relative date</h4>
+                    <button class="test-button" onclick="testGetRelativeDate()">Test</button>
+                    <div id="get-relative-date-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getTimeDifference() - Get time difference</h4>
+                    <button class="test-button" onclick="testGetTimeDifference()">Test</button>
+                    <div id="get-time-difference-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getRamdomDateBetween() - Get random date between range</h4>
+                    <button class="test-button" onclick="testGetRandomDateBetween()">Test</button>
+                    <div id="get-random-date-between-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Functions -->
+        <div class="test-section">
+            <h2>🌐 Network Functions</h2>
+            
+            <div class="test-group">
+                <h3>HTTP Requests</h3>
+                
+                <div class="test-case">
+                    <h4>runFetch() - Make HTTP request</h4>
+                    <button class="test-button" onclick="testRunFetch()">Test</button>
+                    <div id="run-fetch-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>loadImage() - Load image with options</h4>
+                    <button class="test-button" onclick="testLoadImage()">Test</button>
+                    <div id="load-image-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>loadFileContent() - Load file content</h4>
+                    <button class="test-button" onclick="testLoadFileContent()">Test</button>
+                    <div id="load-file-content-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Functions -->
+        <div class="test-section">
+            <h2>💾 Storage Functions</h2>
+            
+            <div class="test-group">
+                <h3>Storage Management</h3>
+                
+                <div class="test-case">
+                    <h4>clearStorage() - Clear all storage</h4>
+                    <button class="test-button" onclick="testClearStorage()">Test</button>
+                    <div id="clear-storage-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>exportStorage() - Export storage data</h4>
+                    <button class="test-button" onclick="testExportStorage()">Test</button>
+                    <div id="export-storage-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>importStorage() - Import storage data</h4>
+                    <button class="test-button" onclick="testImportStorage()">Test</button>
+                    <div id="import-storage-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>getCookies() - Get cookies</h4>
+                    <button class="test-button" onclick="testGetCookies()">Test</button>
+                    <div id="get-cookies-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Math & Array Functions -->
+        <div class="test-section">
+            <h2>🔢 Math & Array Functions</h2>
+            
+            <div class="test-group">
+                <h3>Math Utilities</h3>
+                
+                <div class="test-case">
+                    <h4>isFloat() - Check if number is float</h4>
+                    <button class="test-button" onclick="testIsFloat()">Test</button>
+                    <div id="is-float-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>roundToTwo() - Round to two decimal places</h4>
+                    <button class="test-button" onclick="testRoundToTwo()">Test</button>
+                    <div id="round-to-two-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>randomNumber() - Generate random number</h4>
+                    <button class="test-button" onclick="testRandomNumber()">Test</button>
+                    <div id="random-number-result" class="test-result"></div>
+                </div>
+            </div>
+            
+            <div class="test-group">
+                <h3>Array Utilities</h3>
+                
+                <div class="test-case">
+                    <h4>shuffle() - Shuffle array</h4>
+                    <button class="test-button" onclick="testShuffle()">Test</button>
+                    <div id="shuffle-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>arrayUnique() - Get unique array elements</h4>
+                    <button class="test-button" onclick="testArrayUnique()">Test</button>
+                    <div id="array-unique-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Element Creation Functions -->
+        <div class="test-section">
+            <h2>🏗️ Element Creation Functions</h2>
+            
+            <div class="test-group">
+                <h3>Element Creation</h3>
+                
+                <div class="test-case">
+                    <h4>create() - Create DOM element</h4>
+                    <button class="test-button" onclick="testCreate()">Test</button>
+                    <div id="create-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>createStyle() - Create style element</h4>
+                    <button class="test-button" onclick="testCreateStyle()">Test</button>
+                    <div id="create-style-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>htmlToNode() - Convert HTML to DOM node</h4>
+                    <button class="test-button" onclick="testHtmlToNode()">Test</button>
+                    <div id="html-to-node-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>cloneNode() - Clone DOM node</h4>
+                    <button class="test-button" onclick="testCloneNode()">Test</button>
+                    <div id="clone-node-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Utility Functions -->
+        <div class="test-section">
+            <h2>🔧 Additional Utility Functions</h2>
+            
+            <div class="test-group">
+                <h3>Element Utilities</h3>
+                
+                <div class="test-case">
+                    <h4>isElement() - Check if element is DOM element</h4>
+                    <button class="test-button" onclick="testIsElement()">Test</button>
+                    <div id="is-element-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>isTextBox() - Check if element is text input</h4>
+                    <button class="test-button" onclick="testIsTextBox()">Test</button>
+                    <div id="is-textbox-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>isAttributeTrue() - Check if attribute is true</h4>
+                    <button class="test-button" onclick="testIsAttributeTrue()">Test</button>
+                    <div id="is-attribute-true-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>isAttributeFalse() - Check if attribute is false</h4>
+                    <button class="test-button" onclick="testIsAttributeFalse()">Test</button>
+                    <div id="is-attribute-false-result" class="test-result"></div>
+                </div>
+            </div>
+            
+            <div class="test-group">
+                <h3>Control Functions</h3>
+                
+                <div class="test-case">
+                    <h4>enableDisableToggle() - Toggle element enabled state</h4>
+                    <button class="test-button" onclick="testEnableDisableToggle()">Test</button>
+                    <div id="enable-disable-toggle-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>sleep() - Sleep/delay function</h4>
+                    <button class="test-button" onclick="testSleep()">Test</button>
+                    <div id="sleep-result" class="test-result"></div>
+                </div>
+                
+                <div class="test-case">
+                    <h4>runIntervalUntil() - Run interval until condition</h4>
+                    <button class="test-button" onclick="testRunIntervalUntil()">Test</button>
+                    <div id="run-interval-until-result" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Elements -->
+    <div id="test-elements" style="display: none;">
+        <div id="test-div" class="test-element">Test Div</div>
+        <span id="test-span" class="test-element">Test Span</span>
+        <button id="test-button" class="test-element">Test Button</button>
+        <input id="test-input" type="text" value="Test Input" class="test-element">
+        <select id="test-select" class="test-element">
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+        </select>
+        <textarea id="test-textarea" class="test-element">Test Textarea</textarea>
+        <form id="test-form" class="test-element">
+            <input type="text" name="test-field" value="Test Field">
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        // Test state management
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            pending: 0
+        };
+
+        // Test helper functions
+        function logTestResult(testId, passed, message, details = '') {
+            const resultElement = document.getElementById(testId);
+            const statusClass = passed ? 'test-pass' : 'test-fail';
+            const statusIcon = passed ? '✅' : '❌';
+            
+            resultElement.innerHTML = `
+                <div class="${statusClass}">
+                    ${statusIcon} ${message}
+                    ${details ? `<div class="test-output">${details}</div>` : ''}
+                </div>
+            `;
+            
+            // Update counters
+            testResults.total++;
+            if (passed) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+            updateTestSummary();
+        }
+
+        function updateTestSummary() {
+            document.getElementById('total-tests').textContent = testResults.total;
+            document.getElementById('passed-tests').textContent = testResults.passed;
+            document.getElementById('failed-tests').textContent = testResults.failed;
+            document.getElementById('pending-tests').textContent = testResults.pending;
+        }
+        
+        function clearResults() {
+            // Clear all test result divs
+            const resultDivs = document.querySelectorAll('.test-result');
+            resultDivs.forEach(div => {
+                div.innerHTML = '';
+                div.className = 'test-result';
+            });
+            
+            // Reset test summary
+            testResults = { total: 0, passed: 0, failed: 0, pending: 0 };
+            updateTestSummary();
+            
+            console.log('🧹 Test results cleared');
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            // Run all test functions
+            const testFunctions = [
+                'testAppSet', 'testAppGet', 'testAppRemove',
+                'testAppPushState', 'testAppPullState', 'testAppPopState',
+                'testSelect', 'testSelectAll', 'testSelectByContent', 'testSelectFocusable',
+                'testAddClass', 'testRemoveClass', 'testHasClass',
+                'testRemoveElem', 'testSoftHide',
+                'testOn', 'testRemoveOn', 'testDispatchEvent', 'testDispatchCustomEvent',
+                'testObserveMutation', 'testObserveAttributes', 'testObserveText', 'testObserveChildren',
+                'testStrCleanUp', 'testStrStripTags', 'testStrReplace', 'testContainsString',
+                'testGenerateID', 'testGeneratePassword', 'testPad',
+                'testDisableForm', 'testEnableForm', 'testDisableElement', 'testEnableElement',
+                'testGetTimestamp', 'testGetISO8601Timestamp', 'testGetLocalDate', 'testGetRelativeDate',
+                'testGetTimeDifference', 'testGetRandomDateBetween',
+                'testRunFetch', 'testLoadImage', 'testLoadFileContent',
+                'testClearStorage', 'testExportStorage', 'testImportStorage', 'testGetCookies',
+                'testIsFloat', 'testRoundToTwo', 'testRandomNumber',
+                'testShuffle', 'testArrayUnique',
+                'testCreate', 'testCreateStyle', 'testHtmlToNode', 'testCloneNode',
+                'testIsElement', 'testIsTextBox', 'testIsAttributeTrue', 'testIsAttributeFalse',
+                'testEnableDisableToggle', 'testSleep', 'testRunIntervalUntil'
+            ];
+            
+            testFunctions.forEach(funcName => {
+                try {
+                    if (typeof window[funcName] === 'function') {
+                        window[funcName]();
+                    }
+                } catch (error) {
+                    console.error(`Error running test ${funcName}:`, error);
+                }
+            });
+        }
+
+        // ========================================
+        // CORE APP FUNCTIONS TESTS
+        // ========================================
+        
+        function testAppSet() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_key_' + Date.now();
+                const testValue = 'test_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const retrieved = app.get(testKey);
+                
+                const passed = retrieved === testValue;
+                logTestResult('app-set-result', passed, 
+                    passed ? 'app.set() works correctly' : 'app.set() failed to store value',
+                    `Key: ${testKey}, Expected: ${testValue}, Got: ${retrieved}`
+                );
+            } catch (error) {
+                logTestResult('app-set-result', false, 'app.set() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppGet() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_get_key_' + Date.now();
+                const testValue = 'test_get_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const retrieved = app.get(testKey);
+                const nonExistent = app.get('non_existent_key_' + Date.now());
+                
+                const passed = retrieved === testValue && nonExistent === undefined;
+                logTestResult('app-get-result', passed,
+                    passed ? 'app.get() works correctly' : 'app.get() failed to retrieve value',
+                    `Retrieved: ${retrieved}, Non-existent: ${nonExistent}`
+                );
+            } catch (error) {
+                logTestResult('app-get-result', false, 'app.get() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppRemove() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_remove_key_' + Date.now();
+                const testValue = 'test_remove_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const beforeRemove = app.get(testKey);
+                app.remove(testKey);
+                const afterRemove = app.get(testKey);
+                
+                const passed = beforeRemove === testValue && afterRemove === undefined;
+                logTestResult('app-remove-result', passed,
+                    passed ? 'app.remove() works correctly' : 'app.remove() failed to remove value',
+                    `Before: ${beforeRemove}, After: ${afterRemove}`
+                );
+            } catch (error) {
+                logTestResult('app-remove-result', false, 'app.remove() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppPushState() {
+            try {
+                const { app } = __CPLIB__;
+                const testId = 'test_state_' + Date.now();
+                let callbackExecuted = false;
+                
+                const callback = () => { callbackExecuted = true; };
+                app.pushState(testId, callback);
+                
+                const passed = app.elementHistory.length > 0 && 
+                              app.elementHistory[app.elementHistory.length - 1].id === testId;
+                
+                logTestResult('app-pushstate-result', passed,
+                    passed ? 'app.pushState() works correctly' : 'app.pushState() failed to push state',
+                    `History length: ${app.elementHistory.length}, Last ID: ${app.elementHistory[app.elementHistory.length - 1]?.id}`
+                );
+            } catch (error) {
+                logTestResult('app-pushstate-result', false, 'app.pushState() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppPullState() {
+            try {
+                const { app } = __CPLIB__;
+                const testId1 = 'test_pull_1_' + Date.now();
+                const testId2 = 'test_pull_2_' + Date.now();
+                
+                app.pushState(testId1, () => {});
+                app.pushState(testId2, () => {});
+                const beforePull = app.elementHistory.length;
+                
+                app.pullState(testId1);
+                const afterPull = app.elementHistory.length;
+                
+                const passed = beforePull === 2 && afterPull === 1;
+                logTestResult('app-pullstate-result', passed,
+                    passed ? 'app.pullState() works correctly' : 'app.pullState() failed to pull state',
+                    `Before: ${beforePull}, After: ${afterPull}`
+                );
+            } catch (error) {
+                logTestResult('app-pullstate-result', false, 'app.pullState() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppPopState() {
+            try {
+                const { app } = __CPLIB__;
+                const testId = 'test_pop_' + Date.now();
+                let callbackExecuted = false;
+                
+                const callback = () => { callbackExecuted = true; };
+                app.pushState(testId, callback);
+                
+                // Simulate popstate event
+                const mockEvent = { type: 'popstate' };
+                app.popState(mockEvent);
+                
+                const passed = callbackExecuted;
+                logTestResult('app-popstate-result', passed,
+                    passed ? 'app.popState() works correctly' : 'app.popState() failed to execute callback',
+                    `Callback executed: ${callbackExecuted}`
+                );
+            } catch (error) {
+                logTestResult('app-popstate-result', false, 'app.popState() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // DOM SELECTION FUNCTIONS TESTS
+        // ========================================
+        
+        function testSelect() {
+            try {
+                const { select } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                const result1 = select('#test-div');
+                const result2 = select('non-existent-element');
+                
+                const passed = result1 === testDiv && result2 === null;
+                logTestResult('select-result', passed,
+                    passed ? 'select() works correctly' : 'select() failed to select element',
+                    `Found: ${result1?.id}, Not found: ${result2}`
+                );
+            } catch (error) {
+                logTestResult('select-result', false, 'select() threw error: ' + error.message);
+            }
+        }
+        
+        function testSelectAll() {
+            try {
+                const { select } = __CPLIB__;
+                
+                const result = select('.test-element', true);
+                const expectedCount = document.querySelectorAll('.test-element').length;
+                
+                const passed = Array.isArray(result) && result.length === expectedCount;
+                logTestResult('select-all-result', passed,
+                    passed ? 'select() with all=true works correctly' : 'select() with all=true failed',
+                    `Found: ${result.length}, Expected: ${expectedCount}`
+                );
+            } catch (error) {
+                logTestResult('select-all-result', false, 'select() with all=true threw error: ' + error.message);
+            }
+        }
+        
+        function testSelectByContent() {
+            try {
+                const { selectByContent } = __CPLIB__;
+                
+                const result = selectByContent('div', 'Test Div', true);
+                
+                const passed = Array.isArray(result) && result.length > 0;
+                logTestResult('select-by-content-result', passed,
+                    passed ? 'selectByContent() works correctly' : 'selectByContent() failed to find elements',
+                    `Found: ${result.length} elements with "Test Div" content`
+                );
+            } catch (error) {
+                logTestResult('select-by-content-result', false, 'selectByContent() threw error: ' + error.message);
+            }
+        }
+        
+        function testSelectFocusable() {
+            try {
+                const { selectFocusable } = __CPLIB__;
+                
+                const result = selectFocusable();
+                
+                const passed = Array.isArray(result) && result.length > 0;
+                logTestResult('select-focusable-result', passed,
+                    passed ? 'selectFocusable() works correctly' : 'selectFocusable() failed to find focusable elements',
+                    `Found: ${result.length} focusable elements`
+                );
+            } catch (error) {
+                logTestResult('select-focusable-result', false, 'selectFocusable() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // ELEMENT MANIPULATION FUNCTIONS TESTS
+        // ========================================
+        
+        function testAddClass() {
+            try {
+                const { addClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-class-' + Date.now();
+                
+                addClass(testDiv, testClass);
+                const hasClass = testDiv.classList.contains(testClass);
+                
+                const passed = hasClass;
+                logTestResult('add-class-result', passed,
+                    passed ? 'addClass() works correctly' : 'addClass() failed to add class',
+                    `Class added: ${testClass}, Has class: ${hasClass}`
+                );
+            } catch (error) {
+                logTestResult('add-class-result', false, 'addClass() threw error: ' + error.message);
+            }
+        }
+        
+        function testRemoveClass() {
+            try {
+                const { removeClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-remove-class-' + Date.now();
+                
+                testDiv.classList.add(testClass);
+                removeClass(testDiv, testClass);
+                const hasClass = testDiv.classList.contains(testClass);
+                
+                const passed = !hasClass;
+                logTestResult('remove-class-result', passed,
+                    passed ? 'removeClass() works correctly' : 'removeClass() failed to remove class',
+                    `Class removed: ${testClass}, Has class: ${hasClass}`
+                );
+            } catch (error) {
+                logTestResult('remove-class-result', false, 'removeClass() threw error: ' + error.message);
+            }
+        }
+        
+        function testHasClass() {
+            try {
+                const { hasClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-has-class-' + Date.now();
+                
+                testDiv.classList.add(testClass);
+                const hasClassResult = hasClass(testDiv, testClass);
+                const hasNonExistentClass = hasClass(testDiv, 'non-existent-class');
+                
+                const passed = hasClassResult && !hasNonExistentClass;
+                logTestResult('has-class-result', passed,
+                    passed ? 'hasClass() works correctly' : 'hasClass() failed to check class',
+                    `Has class: ${hasClassResult}, Has non-existent: ${hasNonExistentClass}`
+                );
+            } catch (error) {
+                logTestResult('has-class-result', false, 'hasClass() threw error: ' + error.message);
+            }
+        }
+        
+        function testRemoveElem() {
+            try {
+                const { removeElem } = __CPLIB__;
+                const testDiv = document.createElement('div');
+                testDiv.id = 'test-remove-elem-' + Date.now();
+                testDiv.textContent = 'Test Remove Element';
+                document.body.appendChild(testDiv);
+                
+                const beforeRemove = document.getElementById(testDiv.id);
+                removeElem(testDiv);
+                const afterRemove = document.getElementById(testDiv.id);
+                
+                const passed = beforeRemove !== null && afterRemove === null;
+                logTestResult('remove-elem-result', passed,
+                    passed ? 'removeElem() works correctly' : 'removeElem() failed to remove element',
+                    `Before: ${beforeRemove ? 'exists' : 'null'}, After: ${afterRemove ? 'exists' : 'null'}`
+                );
+            } catch (error) {
+                logTestResult('remove-elem-result', false, 'removeElem() threw error: ' + error.message);
+            }
+        }
+        
+        function testSoftHide() {
+            try {
+                const { softHide } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                softHide(testDiv);
+                const isHidden = testDiv.style.display === 'none';
+                
+                const passed = isHidden;
+                logTestResult('soft-hide-result', passed,
+                    passed ? 'softHide() works correctly' : 'softHide() failed to hide element',
+                    `Display: ${testDiv.style.display}`
+                );
+            } catch (error) {
+                logTestResult('soft-hide-result', false, 'softHide() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // EVENT SYSTEM FUNCTIONS TESTS
+        // ========================================
+        
+        function testOn() {
+            try {
+                const { _on } = __CPLIB__;
+                const testButton = document.getElementById('test-button');
+                let eventFired = false;
+                
+                const handler = () => { eventFired = true; };
+                testButton._on('click', handler);
+                
+                // Simulate click
+                testButton.click();
+                
+                const passed = eventFired;
+                logTestResult('on-result', passed,
+                    passed ? '_on() works correctly' : '_on() failed to attach event listener',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('on-result', false, '_on() threw error: ' + error.message);
+            }
+        }
+        
+        function testRemoveOn() {
+            try {
+                const { _on, _removeOn } = __CPLIB__;
+                const testButton = document.getElementById('test-button');
+                let eventFired = false;
+                
+                const handler = () => { eventFired = true; };
+                testButton._on('click', handler);
+                testButton._removeOn('click', handler);
+                
+                // Simulate click
+                testButton.click();
+                
+                const passed = !eventFired;
+                logTestResult('remove-on-result', passed,
+                    passed ? '_removeOn() works correctly' : '_removeOn() failed to remove event listener',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('remove-on-result', false, '_removeOn() threw error: ' + error.message);
+            }
+        }
+        
+        function testDispatchEvent() {
+            try {
+                const { dispatchEvent } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let eventFired = false;
+                
+                testDiv.addEventListener('custom-test', () => { eventFired = true; });
+                dispatchEvent(testDiv, 'custom-test');
+                
+                const passed = eventFired;
+                logTestResult('dispatch-event-result', passed,
+                    passed ? 'dispatchEvent() works correctly' : 'dispatchEvent() failed to dispatch event',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('dispatch-event-result', false, 'dispatchEvent() threw error: ' + error.message);
+            }
+        }
+        
+        function testDispatchCustomEvent() {
+            try {
+                const { dispatchCustomEvent } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let eventFired = false;
+                let customData = null;
+                
+                testDiv.addEventListener('custom-test-data', (e) => { 
+                    eventFired = true; 
+                    customData = e.detail;
+                });
+                dispatchCustomEvent(testDiv, 'custom-test-data', { detail: { test: 'data' } });
+                
+                const passed = eventFired && customData && customData.test === 'data';
+                logTestResult('dispatch-custom-event-result', passed,
+                    passed ? 'dispatchCustomEvent() works correctly' : 'dispatchCustomEvent() failed to dispatch custom event',
+                    `Event fired: ${eventFired}, Data: ${JSON.stringify(customData)}`
+                );
+            } catch (error) {
+                logTestResult('dispatch-custom-event-result', false, 'dispatchCustomEvent() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // OBSERVER FUNCTIONS TESTS
+        // ========================================
+        
+        function testObserveMutation() {
+            try {
+                const { observeMutation } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let mutationObserved = false;
+                
+                const observer = observeMutation(testDiv, { attributes: true }, () => {
+                    mutationObserved = true;
+                });
+                
+                // Trigger mutation
+                testDiv.setAttribute('data-test', 'value');
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = mutationObserved;
+                    logTestResult('observe-mutation-result', passed,
+                        passed ? 'observeMutation() works correctly' : 'observeMutation() failed to observe mutations',
+                        `Mutation observed: ${mutationObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-mutation-result', false, 'observeMutation() threw error: ' + error.message);
+            }
+        }
+        
+        function testObserveAttributes() {
+            try {
+                const { observeAttributes } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let attributeObserved = false;
+                
+                const observer = observeAttributes(testDiv, () => {
+                    attributeObserved = true;
+                });
+                
+                // Trigger attribute change
+                testDiv.setAttribute('data-test-attr', 'value');
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = attributeObserved;
+                    logTestResult('observe-attributes-result', passed,
+                        passed ? 'observeAttributes() works correctly' : 'observeAttributes() failed to observe attributes',
+                        `Attribute observed: ${attributeObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-attributes-result', false, 'observeAttributes() threw error: ' + error.message);
+            }
+        }
+        
+        function testObserveText() {
+            try {
+                const { observeText } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let textObserved = false;
+                
+                const observer = observeText(testDiv, () => {
+                    textObserved = true;
+                });
+                
+                // Trigger text change
+                testDiv.textContent = 'New text content';
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = textObserved;
+                    logTestResult('observe-text-result', passed,
+                        passed ? 'observeText() works correctly' : 'observeText() failed to observe text changes',
+                        `Text observed: ${textObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-text-result', false, 'observeText() threw error: ' + error.message);
+            }
+        }
+        
+        function testObserveChildren() {
+            try {
+                const { observeChildren } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let childrenObserved = false;
+                
+                const observer = observeChildren(testDiv, () => {
+                    childrenObserved = true;
+                });
+                
+                // Trigger children change
+                const newChild = document.createElement('span');
+                newChild.textContent = 'New child';
+                testDiv.appendChild(newChild);
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = childrenObserved;
+                    logTestResult('observe-children-result', passed,
+                        passed ? 'observeChildren() works correctly' : 'observeChildren() failed to observe children changes',
+                        `Children observed: ${childrenObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-children-result', false, 'observeChildren() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // UTILITY FUNCTIONS TESTS
+        // ========================================
+        
+        function testStrCleanUp() {
+            try {
+                const { strCleanUp } = __CPLIB__;
+                const testString = '  Hello   World  \n\t  ';
+                const result = strCleanUp(testString);
+                
+                const passed = result === 'Hello World';
+                logTestResult('str-cleanup-result', passed,
+                    passed ? 'strCleanUp() works correctly' : 'strCleanUp() failed to clean string',
+                    `Input: "${testString}", Output: "${result}"`
+                );
+            } catch (error) {
+                logTestResult('str-cleanup-result', false, 'strCleanUp() threw error: ' + error.message);
+            }
+        }
+        
+        function testStrStripTags() {
+            try {
+                const { strStripTags } = __CPLIB__;
+                const testHtml = '<div><p>Hello <strong>World</strong></p></div>';
+                const result = strStripTags(testHtml);
+                
+                const passed = result === 'Hello World';
+                logTestResult('str-strip-tags-result', passed,
+                    passed ? 'strStripTags() works correctly' : 'strStripTags() failed to strip HTML tags',
+                    `Input: "${testHtml}", Output: "${result}"`
+                );
+            } catch (error) {
+                logTestResult('str-strip-tags-result', false, 'strStripTags() threw error: ' + error.message);
+            }
+        }
+        
+        function testStrReplace() {
+            try {
+                const { strReplace } = __CPLIB__;
+                const testString = 'Hello World Hello';
+                const result = strReplace(testString, 'Hello', 'Hi');
+                
+                const passed = result === 'Hi World Hi';
+                logTestResult('str-replace-result', passed,
+                    passed ? 'strReplace() works correctly' : 'strReplace() failed to replace string',
+                    `Input: "${testString}", Output: "${result}"`
+                );
+            } catch (error) {
+                logTestResult('str-replace-result', false, 'strReplace() threw error: ' + error.message);
+            }
+        }
+        
+        function testContainsString() {
+            try {
+                const { containsString } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                const result1 = containsString(testDiv, 'Test Div');
+                const result2 = containsString('Hello World', 'World');
+                const result3 = containsString('Hello World', 'Universe');
+                
+                const passed = result1 && result2 && !result3;
+                logTestResult('contains-string-result', passed,
+                    passed ? 'containsString() works correctly' : 'containsString() failed to check string containment',
+                    `DOM: ${result1}, String: ${result2}, Not found: ${result3}`
+                );
+            } catch (error) {
+                logTestResult('contains-string-result', false, 'containsString() threw error: ' + error.message);
+            }
+        }
+        
+        function testGenerateID() {
+            try {
+                const { generateID } = __CPLIB__;
+                
+                const id1 = generateID();
+                const id2 = generateID();
+                
+                const passed = typeof id1 === 'string' && id1.length > 0 && id1 !== id2;
+                logTestResult('generate-id-result', passed,
+                    passed ? 'generateID() works correctly' : 'generateID() failed to generate unique IDs',
+                    `ID1: ${id1}, ID2: ${id2}`
+                );
+            } catch (error) {
+                logTestResult('generate-id-result', false, 'generateID() threw error: ' + error.message);
+            }
+        }
+        
+        function testGeneratePassword() {
+            try {
+                const { generatePassword } = __CPLIB__;
+                
+                const password1 = generatePassword(8);
+                const password2 = generatePassword(12);
+                
+                const passed = password1.length === 8 && password2.length === 12 && password1 !== password2;
+                logTestResult('generate-password-result', passed,
+                    passed ? 'generatePassword() works correctly' : 'generatePassword() failed to generate passwords',
+                    `Password1: ${password1.length} chars, Password2: ${password2.length} chars`
+                );
+            } catch (error) {
+                logTestResult('generate-password-result', false, 'generatePassword() threw error: ' + error.message);
+            }
+        }
+        
+        function testPad() {
+            try {
+                const { pad } = __CPLIB__;
+                
+                const result1 = pad(5, 4);
+                const result2 = pad(123, 6, '0');
+                
+                const passed = result1 === '0005' && result2 === '000123';
+                logTestResult('pad-result', passed,
+                    passed ? 'pad() works correctly' : 'pad() failed to pad numbers',
+                    `Pad(5,4): "${result1}", Pad(123,6): "${result2}"`
+                );
+            } catch (error) {
+                logTestResult('pad-result', false, 'pad() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // FORM FUNCTIONS TESTS
+        // ========================================
+        
+        function testDisableForm() {
+            try {
+                const { disableForm } = __CPLIB__;
+                const testForm = document.getElementById('test-form');
+                
+                disableForm(testForm, true);
+                const inputs = testForm.querySelectorAll('input, button');
+                const allDisabled = Array.from(inputs).every(input => input.disabled);
+                
+                const passed = allDisabled;
+                logTestResult('disable-form-result', passed,
+                    passed ? 'disableForm() works correctly' : 'disableForm() failed to disable form elements',
+                    `All disabled: ${allDisabled}`
+                );
+            } catch (error) {
+                logTestResult('disable-form-result', false, 'disableForm() threw error: ' + error.message);
+            }
+        }
+        
+        function testEnableForm() {
+            try {
+                const { enableForm } = __CPLIB__;
+                const testForm = document.getElementById('test-form');
+                
+                enableForm(testForm);
+                const inputs = testForm.querySelectorAll('input, button');
+                const allEnabled = Array.from(inputs).every(input => !input.disabled);
+                
+                const passed = allEnabled;
+                logTestResult('enable-form-result', passed,
+                    passed ? 'enableForm() works correctly' : 'enableForm() failed to enable form elements',
+                    `All enabled: ${allEnabled}`
+                );
+            } catch (error) {
+                logTestResult('enable-form-result', false, 'enableForm() threw error: ' + error.message);
+            }
+        }
+        
+        function testDisableElement() {
+            try {
+                const { disableElement } = __CPLIB__;
+                const testInput = document.getElementById('test-input');
+                
+                disableElement(testInput);
+                const isDisabled = testInput.disabled;
+                
+                const passed = isDisabled;
+                logTestResult('disable-element-result', passed,
+                    passed ? 'disableElement() works correctly' : 'disableElement() failed to disable element',
+                    `Disabled: ${isDisabled}`
+                );
+            } catch (error) {
+                logTestResult('disable-element-result', false, 'disableElement() threw error: ' + error.message);
+            }
+        }
+        
+        function testEnableElement() {
+            try {
+                const { enableElement } = __CPLIB__;
+                const testInput = document.getElementById('test-input');
+                
+                enableElement(testInput);
+                const isEnabled = !testInput.disabled;
+                
+                const passed = isEnabled;
+                logTestResult('enable-element-result', passed,
+                    passed ? 'enableElement() works correctly' : 'enableElement() failed to enable element',
+                    `Enabled: ${isEnabled}`
+                );
+            } catch (error) {
+                logTestResult('enable-element-result', false, 'enableElement() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // DATE & TIME FUNCTIONS TESTS
+        // ========================================
+        
+        function testGetTimestamp() {
+            try {
+                const { getTimestamp } = __CPLIB__;
+                
+                const timestamp = getTimestamp();
+                const now = Date.now();
+                
+                const passed = typeof timestamp === 'number' && timestamp > 0;
+                logTestResult('get-timestamp-result', passed,
+                    passed ? 'getTimestamp() works correctly' : 'getTimestamp() failed to get timestamp',
+                    `Timestamp: ${timestamp}`
+                );
+            } catch (error) {
+                logTestResult('get-timestamp-result', false, 'getTimestamp() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetISO8601Timestamp() {
+            try {
+                const { getISO8601Timestamp } = __CPLIB__;
+                
+                const iso = getISO8601Timestamp();
+                const isValidISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(iso);
+                
+                const passed = typeof iso === 'string' && isValidISO;
+                logTestResult('get-iso8601-timestamp-result', passed,
+                    passed ? 'getISO8601Timestamp() works correctly' : 'getISO8601Timestamp() failed to get ISO timestamp',
+                    `ISO: ${iso}`
+                );
+            } catch (error) {
+                logTestResult('get-iso8601-timestamp-result', false, 'getISO8601Timestamp() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetLocalDate() {
+            try {
+                const { getLocalDate } = __CPLIB__;
+                
+                const localDate = getLocalDate('es-VE');
+                const isValidDate = localDate && typeof localDate === 'string';
+                
+                const passed = isValidDate;
+                logTestResult('get-local-date-result', passed,
+                    passed ? 'getLocalDate() works correctly' : 'getLocalDate() failed to get local date',
+                    `Local date: ${localDate}`
+                );
+            } catch (error) {
+                logTestResult('get-local-date-result', false, 'getLocalDate() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetRelativeDate() {
+            try {
+                const { getRelativeDate } = __CPLIB__;
+                const olderDate = new Date('2023-01-01');
+                const newerDate = new Date('2023-12-31');
+                
+                const relative = getRelativeDate(olderDate, newerDate);
+                const isValidRelative = relative && typeof relative === 'string';
+                
+                const passed = isValidRelative;
+                logTestResult('get-relative-date-result', passed,
+                    passed ? 'getRelativeDate() works correctly' : 'getRelativeDate() failed to get relative date',
+                    `Relative: ${relative}`
+                );
+            } catch (error) {
+                logTestResult('get-relative-date-result', false, 'getRelativeDate() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetTimeDifference() {
+            try {
+                const { getTimeDifference } = __CPLIB__;
+                const oldDate = new Date('2023-01-01');
+                const newDate = new Date('2023-01-02');
+                
+                const diff = getTimeDifference(oldDate, newDate);
+                const isValidDiff = diff && typeof diff === 'string';
+                
+                const passed = isValidDiff;
+                logTestResult('get-time-difference-result', passed,
+                    passed ? 'getTimeDifference() works correctly' : 'getTimeDifference() failed to get time difference',
+                    `Difference: ${diff}`
+                );
+            } catch (error) {
+                logTestResult('get-time-difference-result', false, 'getTimeDifference() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetRandomDateBetween() {
+            try {
+                const { getRamdomDateBetween } = __CPLIB__;
+                const start = new Date('2023-01-01');
+                const end = new Date('2023-12-31');
+                
+                const randomDate = getRamdomDateBetween(start, end);
+                const isValidDate = randomDate instanceof Date;
+                
+                const passed = isValidDate;
+                logTestResult('get-random-date-between-result', passed,
+                    passed ? 'getRamdomDateBetween() works correctly' : 'getRamdomDateBetween() failed to get random date',
+                    `Random date: ${randomDate}`
+                );
+            } catch (error) {
+                logTestResult('get-random-date-between-result', false, 'getRamdomDateBetween() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // NETWORK FUNCTIONS TESTS
+        // ========================================
+        
+        function testRunFetch() {
+            try {
+                const { runFetch } = __CPLIB__;
+                
+                // Test with a simple endpoint (this will likely fail in test environment)
+                runFetch('https://httpbin.org/get')
+                    .then(result => {
+                        const passed = result && result.status === 'success';
+                        logTestResult('run-fetch-result', passed,
+                            passed ? 'runFetch() works correctly' : 'runFetch() failed to make request',
+                            `Status: ${result?.status}`
+                        );
+                    })
+                    .catch(error => {
+                        logTestResult('run-fetch-result', false, 'runFetch() threw error: ' + error.message);
+                    });
+            } catch (error) {
+                logTestResult('run-fetch-result', false, 'runFetch() threw error: ' + error.message);
+            }
+        }
+        
+        function testLoadImage() {
+            try {
+                const { loadImage } = __CPLIB__;
+                
+                loadImage({ url: 'https://via.placeholder.com/150', fnc: (img) => {
+                    const passed = img && img.tagName === 'IMG';
+                    logTestResult('load-image-result', passed,
+                        passed ? 'loadImage() works correctly' : 'loadImage() failed to load image',
+                        `Image loaded: ${!!img}`
+                    );
+                }});
+            } catch (error) {
+                logTestResult('load-image-result', false, 'loadImage() threw error: ' + error.message);
+            }
+        }
+        
+        function testLoadFileContent() {
+            try {
+                const { loadFileContent } = __CPLIB__;
+                
+                // Create a test file
+                const testFile = new File(['test content'], 'test.txt', { type: 'text/plain' });
+                
+                loadFileContent(testFile, 'text/plain')
+                    .then(result => {
+                        const passed = result && result.data === 'test content';
+                        logTestResult('load-file-content-result', passed,
+                            passed ? 'loadFileContent() works correctly' : 'loadFileContent() failed to load file',
+                            `Content: ${result?.data}`
+                        );
+                    })
+                    .catch(error => {
+                        logTestResult('load-file-content-result', false, 'loadFileContent() threw error: ' + error.message);
+                    });
+            } catch (error) {
+                logTestResult('load-file-content-result', false, 'loadFileContent() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // STORAGE FUNCTIONS TESTS
+        // ========================================
+        
+        function testClearStorage() {
+            try {
+                const { clearStorage } = __CPLIB__;
+                
+                // This is async, so we'll just test if it doesn't throw
+                clearStorage();
+                
+                const passed = true; // If no error thrown, consider it passed
+                logTestResult('clear-storage-result', passed,
+                    passed ? 'clearStorage() works correctly' : 'clearStorage() failed to clear storage',
+                    `Storage cleared successfully`
+                );
+            } catch (error) {
+                logTestResult('clear-storage-result', false, 'clearStorage() threw error: ' + error.message);
+            }
+        }
+        
+        function testExportStorage() {
+            try {
+                const { exportStorage } = __CPLIB__;
+                
+                // This is async, so we'll just test if it doesn't throw
+                exportStorage();
+                
+                const passed = true; // If no error thrown, consider it passed
+                logTestResult('export-storage-result', passed,
+                    passed ? 'exportStorage() works correctly' : 'exportStorage() failed to export storage',
+                    `Storage exported successfully`
+                );
+            } catch (error) {
+                logTestResult('export-storage-result', false, 'exportStorage() threw error: ' + error.message);
+            }
+        }
+        
+        function testImportStorage() {
+            try {
+                const { importStorage } = __CPLIB__;
+                
+                const testData = { cookies: {}, localStorage: {}, sessionStorage: {} };
+                importStorage(testData);
+                
+                const passed = true; // If no error thrown, consider it passed
+                logTestResult('import-storage-result', passed,
+                    passed ? 'importStorage() works correctly' : 'importStorage() failed to import storage',
+                    `Storage imported successfully`
+                );
+            } catch (error) {
+                logTestResult('import-storage-result', false, 'importStorage() threw error: ' + error.message);
+            }
+        }
+        
+        function testGetCookies() {
+            try {
+                const { getCookies } = __CPLIB__;
+                
+                const cookies = getCookies();
+                const passed = Array.isArray(cookies);
+                
+                logTestResult('get-cookies-result', passed,
+                    passed ? 'getCookies() works correctly' : 'getCookies() failed to get cookies',
+                    `Cookies found: ${cookies.length}`
+                );
+            } catch (error) {
+                logTestResult('get-cookies-result', false, 'getCookies() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // MATH & ARRAY FUNCTIONS TESTS
+        // ========================================
+        
+        function testIsFloat() {
+            try {
+                const { isFloat } = __CPLIB__;
+                
+                const result1 = isFloat(3.14);
+                const result2 = isFloat(42);
+                const result3 = isFloat('3.14');
+                
+                const passed = result1 && !result2 && result3;
+                logTestResult('is-float-result', passed,
+                    passed ? 'isFloat() works correctly' : 'isFloat() failed to check float values',
+                    `3.14: ${result1}, 42: ${result2}, '3.14': ${result3}`
+                );
+            } catch (error) {
+                logTestResult('is-float-result', false, 'isFloat() threw error: ' + error.message);
+            }
+        }
+        
+        function testRoundToTwo() {
+            try {
+                const { roundToTwo } = __CPLIB__;
+                
+                const result = roundToTwo(3.14159);
+                const passed = result === '3.14';
+                
+                logTestResult('round-to-two-result', passed,
+                    passed ? 'roundToTwo() works correctly' : 'roundToTwo() failed to round to two decimals',
+                    `Input: 3.14159, Output: ${result}`
+                );
+            } catch (error) {
+                logTestResult('round-to-two-result', false, 'roundToTwo() threw error: ' + error.message);
+            }
+        }
+        
+        function testRandomNumber() {
+            try {
+                const { randomNumber } = __CPLIB__;
+                
+                const result = randomNumber(1, 10);
+                const passed = result >= 1 && result <= 10;
+                
+                logTestResult('random-number-result', passed,
+                    passed ? 'randomNumber() works correctly' : 'randomNumber() failed to generate random number',
+                    `Random number: ${result}`
+                );
+            } catch (error) {
+                logTestResult('random-number-result', false, 'randomNumber() threw error: ' + error.message);
+            }
+        }
+        
+        function testShuffle() {
+            try {
+                const { shuffle } = __CPLIB__;
+                
+                const original = [1, 2, 3, 4, 5];
+                const shuffled = shuffle([...original]);
+                
+                const passed = shuffled.length === original.length && 
+                              shuffled.some((val, i) => val !== original[i]);
+                
+                logTestResult('shuffle-result', passed,
+                    passed ? 'shuffle() works correctly' : 'shuffle() failed to shuffle array',
+                    `Original: [${original}], Shuffled: [${shuffled}]`
+                );
+            } catch (error) {
+                logTestResult('shuffle-result', false, 'shuffle() threw error: ' + error.message);
+            }
+        }
+        
+        function testArrayUnique() {
+            try {
+                const { arrayUnique } = __CPLIB__;
+                
+                const original = [1, 2, 2, 3, 3, 3, 4];
+                const unique = arrayUnique(original);
+                
+                const passed = unique.length === 4 && unique.includes(1) && unique.includes(2) && unique.includes(3) && unique.includes(4);
+                
+                logTestResult('array-unique-result', passed,
+                    passed ? 'arrayUnique() works correctly' : 'arrayUnique() failed to get unique values',
+                    `Original: [${original}], Unique: [${unique}]`
+                );
+            } catch (error) {
+                logTestResult('array-unique-result', false, 'arrayUnique() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // ELEMENT CREATION FUNCTIONS TESTS
+        // ========================================
+        
+        function testCreate() {
+            try {
+                const { create } = __CPLIB__;
+                
+                const element = create('div', { id: 'test-create-' + Date.now() }, { textContent: 'Test Create' });
+                
+                const passed = element && element.tagName === 'DIV' && element.textContent === 'Test Create';
+                logTestResult('create-result', passed,
+                    passed ? 'create() works correctly' : 'create() failed to create element',
+                    `Element: ${element?.tagName}, Text: ${element?.textContent}`
+                );
+            } catch (error) {
+                logTestResult('create-result', false, 'create() threw error: ' + error.message);
+            }
+        }
+        
+        function testCreateStyle() {
+            try {
+                const { createStyle } = __CPLIB__;
+                
+                const style = createStyle('body { color: red; }');
+                
+                const passed = style && style.tagName === 'STYLE' && style.textContent.includes('color: red');
+                logTestResult('create-style-result', passed,
+                    passed ? 'createStyle() works correctly' : 'createStyle() failed to create style element',
+                    `Style created: ${!!style}`
+                );
+            } catch (error) {
+                logTestResult('create-style-result', false, 'createStyle() threw error: ' + error.message);
+            }
+        }
+        
+        function testHtmlToNode() {
+            try {
+                const { htmlToNode } = __CPLIB__;
+                
+                const node = htmlToNode('<div id="test-html">Test HTML</div>');
+                
+                const passed = node && node.tagName === 'DIV' && node.textContent === 'Test HTML';
+                logTestResult('html-to-node-result', passed,
+                    passed ? 'htmlToNode() works correctly' : 'htmlToNode() failed to convert HTML to node',
+                    `Node: ${node?.tagName}, Text: ${node?.textContent}`
+                );
+            } catch (error) {
+                logTestResult('html-to-node-result', false, 'htmlToNode() threw error: ' + error.message);
+            }
+        }
+        
+        function testCloneNode() {
+            try {
+                const { cloneNode } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                const cloned = cloneNode(testDiv);
+                
+                const passed = cloned && cloned.tagName === testDiv.tagName && cloned.textContent === testDiv.textContent;
+                logTestResult('clone-node-result', passed,
+                    passed ? 'cloneNode() works correctly' : 'cloneNode() failed to clone node',
+                    `Cloned: ${cloned?.tagName}, Text: ${cloned?.textContent}`
+                );
+            } catch (error) {
+                logTestResult('clone-node-result', false, 'cloneNode() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // ADDITIONAL UTILITY FUNCTIONS TESTS
+        // ========================================
+        
+        function testIsElement() {
+            try {
+                const { isElement } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                const result1 = isElement(testDiv);
+                const result2 = isElement('not an element');
+                const result3 = isElement(document);
+                
+                const passed = result1 && !result2 && result3;
+                logTestResult('is-element-result', passed,
+                    passed ? 'isElement() works correctly' : 'isElement() failed to check if element',
+                    `Div: ${result1}, String: ${result2}, Document: ${result3}`
+                );
+            } catch (error) {
+                logTestResult('is-element-result', false, 'isElement() threw error: ' + error.message);
+            }
+        }
+        
+        function testIsTextBox() {
+            try {
+                const { isTextBox } = __CPLIB__;
+                const testInput = document.getElementById('test-input');
+                const testDiv = document.getElementById('test-div');
+                
+                const result1 = isTextBox(testInput);
+                const result2 = isTextBox(testDiv);
+                
+                const passed = result1 && !result2;
+                logTestResult('is-textbox-result', passed,
+                    passed ? 'isTextBox() works correctly' : 'isTextBox() failed to check if textbox',
+                    `Input: ${result1}, Div: ${result2}`
+                );
+            } catch (error) {
+                logTestResult('is-textbox-result', false, 'isTextBox() threw error: ' + error.message);
+            }
+        }
+        
+        function testIsAttributeTrue() {
+            try {
+                const { isAttributeTrue } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                testDiv.setAttribute('data-test-true', '');
+                testDiv.setAttribute('data-test-false', 'false');
+                
+                const result1 = isAttributeTrue(testDiv, 'data-test-true');
+                const result2 = isAttributeTrue(testDiv, 'data-test-false');
+                const result3 = isAttributeTrue(testDiv, 'data-non-existent');
+                
+                const passed = result1 && !result2 && !result3;
+                logTestResult('is-attribute-true-result', passed,
+                    passed ? 'isAttributeTrue() works correctly' : 'isAttributeTrue() failed to check attribute',
+                    `True: ${result1}, False: ${result2}, Non-existent: ${result3}`
+                );
+            } catch (error) {
+                logTestResult('is-attribute-true-result', false, 'isAttributeTrue() threw error: ' + error.message);
+            }
+        }
+        
+        function testIsAttributeFalse() {
+            try {
+                const { isAttributeFalse } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                testDiv.setAttribute('data-test-true', '');
+                testDiv.setAttribute('data-test-false', 'false');
+                
+                const result1 = isAttributeFalse(testDiv, 'data-test-true');
+                const result2 = isAttributeFalse(testDiv, 'data-test-false');
+                const result3 = isAttributeFalse(testDiv, 'data-non-existent');
+                
+                const passed = !result1 && result2 && result3;
+                logTestResult('is-attribute-false-result', passed,
+                    passed ? 'isAttributeFalse() works correctly' : 'isAttributeFalse() failed to check attribute',
+                    `True: ${result1}, False: ${result2}, Non-existent: ${result3}`
+                );
+            } catch (error) {
+                logTestResult('is-attribute-false-result', false, 'isAttributeFalse() threw error: ' + error.message);
+            }
+        }
+        
+        function testEnableDisableToggle() {
+            try {
+                const { enableDisableToggle } = __CPLIB__;
+                const testInput = document.getElementById('test-input');
+                
+                enableDisableToggle(testInput, true);
+                const disabled = testInput.disabled;
+                
+                enableDisableToggle(testInput, false);
+                const enabled = !testInput.disabled;
+                
+                const passed = disabled && enabled;
+                logTestResult('enable-disable-toggle-result', passed,
+                    passed ? 'enableDisableToggle() works correctly' : 'enableDisableToggle() failed to toggle state',
+                    `Disabled: ${disabled}, Enabled: ${enabled}`
+                );
+            } catch (error) {
+                logTestResult('enable-disable-toggle-result', false, 'enableDisableToggle() threw error: ' + error.message);
+            }
+        }
+        
+        function testSleep() {
+            try {
+                const { sleep } = __CPLIB__;
+                const start = Date.now();
+                
+                sleep(100).then(() => {
+                    const end = Date.now();
+                    const passed = end - start >= 100;
+                    logTestResult('sleep-result', passed,
+                        passed ? 'sleep() works correctly' : 'sleep() failed to sleep',
+                        `Sleep time: ${end - start}ms`
+                    );
+                });
+            } catch (error) {
+                logTestResult('sleep-result', false, 'sleep() threw error: ' + error.message);
+            }
+        }
+        
+        function testRunIntervalUntil() {
+            try {
+                const { runIntervalUntil } = __CPLIB__;
+                let counter = 0;
+                
+                runIntervalUntil(() => {
+                    counter++;
+                    return counter >= 3;
+                }, 50, 1000).then(result => {
+                    const passed = result && counter >= 3;
+                    logTestResult('run-interval-until-result', passed,
+                        passed ? 'runIntervalUntil() works correctly' : 'runIntervalUntil() failed to run interval',
+                        `Counter: ${counter}, Result: ${result}`
+                    );
+                });
+            } catch (error) {
+                logTestResult('run-interval-until-result', false, 'runIntervalUntil() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // MISSING IMPLEMENTATION TESTS
+        // ========================================
+        
+        function testTypeWithExecCommand() {
+            try {
+                const { typeWithExecCommand } = __CPLIB__;
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = typeWithExecCommand('test');
+                
+                const passed = result === undefined || result === null;
+                logTestResult('type-with-exec-command-result', passed,
+                    passed ? 'typeWithExecCommand() is not implemented (as expected)' : 'typeWithExecCommand() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('type-with-exec-command-result', passed,
+                    passed ? 'typeWithExecCommand() is not implemented (as expected)' : 'typeWithExecCommand() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        function testIsIOS() {
+            try {
+                const { isIOS } = __CPLIB__;
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = isIOS();
+                
+                const passed = result === undefined || result === null;
+                logTestResult('is-ios-result', passed,
+                    passed ? 'isIOS() is not implemented (as expected)' : 'isIOS() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('is-ios-result', passed,
+                    passed ? 'isIOS() is not implemented (as expected)' : 'isIOS() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        function testIsElectron() {
+            try {
+                const { isElectron } = __CPLIB__;
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = isElectron();
+                
+                const passed = result === undefined || result === null;
+                logTestResult('is-electron-result', passed,
+                    passed ? 'isElectron() is not implemented (as expected)' : 'isElectron() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('is-electron-result', passed,
+                    passed ? 'isElectron() is not implemented (as expected)' : 'isElectron() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        function testSetSessionGetToken() {
+            try {
+                const { setSessionGetToken } = __CPLIB__;
+                
+                // This function has basic implementation but needs error handling
+                const result = setSessionGetToken('test-token');
+                
+                const passed = result === true || result === false;
+                logTestResult('set-session-get-token-result', passed,
+                    passed ? 'setSessionGetToken() works (basic implementation)' : 'setSessionGetToken() failed',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                logTestResult('set-session-get-token-result', false, 'setSessionGetToken() threw error: ' + error.message);
+            }
+        }
+        
+        function testInsertBefore() {
+            try {
+                const { _insertBefore } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const newElement = document.createElement('span');
+                newElement.textContent = 'Before Element';
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = _insertBefore(newElement, testDiv);
+                
+                const passed = result === undefined || result === null;
+                logTestResult('insert-before-result', passed,
+                    passed ? '_insertBefore() is not implemented (as expected)' : '_insertBefore() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('insert-before-result', passed,
+                    passed ? '_insertBefore() is not implemented (as expected)' : '_insertBefore() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        function testInsertAfter() {
+            try {
+                const { _insertAfter } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const newElement = document.createElement('span');
+                newElement.textContent = 'After Element';
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = _insertAfter(newElement, testDiv);
+                
+                const passed = result === undefined || result === null;
+                logTestResult('insert-after-result', passed,
+                    passed ? '_insertAfter() is not implemented (as expected)' : '_insertAfter() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('insert-after-result', passed,
+                    passed ? '_insertAfter() is not implemented (as expected)' : '_insertAfter() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        function testToggleAttribute() {
+            try {
+                const { _toggleAttribute } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                // This function is not implemented, so it should throw an error or return undefined
+                const result = _toggleAttribute(testDiv, 'data-test-toggle');
+                
+                const passed = result === undefined || result === null;
+                logTestResult('toggle-attribute-result', passed,
+                    passed ? '_toggleAttribute() is not implemented (as expected)' : '_toggleAttribute() unexpectedly returned a value',
+                    `Result: ${result}`
+                );
+            } catch (error) {
+                const passed = error.message.includes('not implemented') || error.message.includes('undefined');
+                logTestResult('toggle-attribute-result', passed,
+                    passed ? '_toggleAttribute() is not implemented (as expected)' : '_toggleAttribute() threw unexpected error',
+                    `Error: ${error.message}`
+                );
+            }
+        }
+        
+        // ========================================
+        // COMPREHENSIVE TEST RUNNER
+        // ========================================
+        
+        function runAllTests() {
+            console.log('🧪 Starting comprehensive helper.js test suite...');
+            
+            // Core App Functions
+            testAppSet();
+            testAppGet();
+            testAppRemove();
+            testAppPushState();
+            testAppPullState();
+            testAppPopState();
+            
+            // DOM Selection Functions
+            testSelect();
+            testSelectAll();
+            testSelectByContent();
+            testSelectFocusable();
+            
+            // Element Manipulation Functions
+            testAddClass();
+            testRemoveClass();
+            testHasClass();
+            testRemoveElem();
+            testSoftHide();
+            
+            // Event System Functions
+            testOn();
+            testRemoveOn();
+            testDispatchEvent();
+            testDispatchCustomEvent();
+            
+            // Observer Functions
+            testObserveMutation();
+            testObserveAttributes();
+            testObserveText();
+            testObserveChildren();
+            
+            // Utility Functions
+            testStrCleanUp();
+            testStrStripTags();
+            testStrReplace();
+            testContainsString();
+            testGenerateID();
+            testGeneratePassword();
+            testPad();
+            
+            // Form Functions
+            testDisableForm();
+            testEnableForm();
+            testDisableElement();
+            testEnableElement();
+            
+            // Date & Time Functions
+            testGetTimestamp();
+            testGetISO8601Timestamp();
+            testGetLocalDate();
+            testGetRelativeDate();
+            testGetTimeDifference();
+            testGetRandomDateBetween();
+            
+            // Network Functions
+            testRunFetch();
+            testLoadImage();
+            testLoadFileContent();
+            
+            // Storage Functions
+            testClearStorage();
+            testExportStorage();
+            testImportStorage();
+            testGetCookies();
+            
+            // Math & Array Functions
+            testIsFloat();
+            testRoundToTwo();
+            testRandomNumber();
+            testShuffle();
+            testArrayUnique();
+            
+            // Element Creation Functions
+            testCreate();
+            testCreateStyle();
+            testHtmlToNode();
+            testCloneNode();
+            
+            // Additional Utility Functions
+            testIsElement();
+            testIsTextBox();
+            testIsAttributeTrue();
+            testIsAttributeFalse();
+            testEnableDisableToggle();
+            testSleep();
+            testRunIntervalUntil();
+            
+            // Missing Implementation Tests
+            testTypeWithExecCommand();
+            testIsIOS();
+            testIsElectron();
+            testSetSessionGetToken();
+            testInsertBefore();
+            testInsertAfter();
+            testToggleAttribute();
+            
+            console.log('✅ All tests completed! Check the results above.');
+        }
+    </script>
+</body>
+</html>

@@ -15,7 +15,7 @@
     const partnerKey = nodeEnv?.env?.HIKVISION_PARTNER_KEY || '23827199';
     const partnerSecret = nodeEnv?.env?.HIKVISION_PARTNER_SECRET || 'nFoLQWdyyf5WeRCEUEZr';*/
     const pageSize = 500;
-    const maxSimultaneousStreams = 25;
+    const maxSimultaneousStreams = 16;
     const endpoints = {
         version: '/artemis/api/common/v1/version',
         encodeDeviceList: '/artemis/api/resource/v1/encodeDevice/encodeDeviceList',

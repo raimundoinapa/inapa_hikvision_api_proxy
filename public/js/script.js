@@ -1,11 +1,7 @@
 //Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
  
 (async () => {
-    const {app, q, create, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
-    const apiServerProtocol = 'http';
-    const apiDomain = '172.20.2.99';
-    const port = '3000';
-    const apiServerUrl = `${apiServerProtocol}://${apiDomain}${! port ? '' : ':' + port}`;
+    const {app, q, select, create, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
     const defaultStreamProtocol = 'websocket';
     const endpoints = {
         auth: '/auth/login',
@@ -88,6 +84,8 @@
     };
     const playersStatus = {};
 
+    var jsDecoder = {};
+
     const dbName = app.get('dbName') || 'inapa_cctv';
     const dbVersion = app.get('dbVersion') || 1;
     const dbSchema = [
@@ -127,6 +125,10 @@
         return await dbStart(dbName, dbVersion, dbUpdate);
     })();
 
+    const jsPluginGridContainerId = 'jsPluginGridContainer';
+    const jsPluginContainer = select(`#${jsPluginGridContainerId}`);
+    const videoPlayerContainerIdIndex = 'jsPluginGridContainerplayer-container-';
+    const videoPlayerIdIndex = 'jsPluginGridContainer_playWindow';
     const globalPreloader = q('.global-preloader');
     const onlineBadge = q('#online-badge');
     const offlineBadge = q('#offline-badge');
@@ -137,10 +139,20 @@
     const btnStopAll = q('#btn-stop-all');
     const btnFullscreenAll = q('#btn-fullscreen-all');
     const btnRefreshAll = q('#btn-refresh-all');
-    const gridContainerWrapper = q('#camera-grid-wrapper');
-    const gridContainer = q('#camera-grid');
-    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
+    const gridWrapper = q('#camera-grid-wrapper');
     const paginationContainer = q('#pagination');
+    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
+    const scrollbarWidth = (() => {
+        const div = create('div', false, {style: {position: 'absolute', visibility: 'hidden', overflow: 'scroll', width: '100px'}});
+
+        document.body.appendChild(div);
+      
+        const w = div.offsetWidth - div.clientWidth;
+
+        div._remove();
+
+        return w;
+    })();
 
     const saveConfig = () => { app.set('configOptions', JSON.stringify(configOptions)); }
 
@@ -158,7 +170,7 @@
     }
 
     const login = async () => {
-        const authToken = await runFetch(apiServerUrl + endpoints.auth, {
+        const authToken = await runFetch(endpoints.auth, {
             method: 'POST',
             headers: {'content-type': 'application/json'},
             body: JSON.stringify({username: 'admin', password: 'admin123'})
@@ -306,6 +318,11 @@
     }
     
     const stopAllPlayers = async () => {
+        //No usamos este bloque porque necesitamos relizar mas operaciones en la UI
+        /*if (jsDecoder?.JS_StopRealPlayAll) { jsDecoder.JS_StopRealPlayAll(); }
+
+        return false;*/
+
         const playerEntries = Object.values(playersStatus);
 
         if (! playerEntries?.length) { return false; }
@@ -327,16 +344,43 @@
         return true;
     }
 
-    const createGrid = async () => {        
-        gridContainer.innerHTML = '';
+    const createGrid = async () => {
+        jsPluginContainer.innerHTML = '';
         
+        jsDecoder = await new JSPlugin({
+            szId: jsPluginGridContainerId,
+            /* iWidth: '100%',
+            iHeight: '100%', */
+            iMaxSplit: parseInt(configOptions.gridSize),
+            iCurrentSplit: parseInt(configOptions.gridSize),
+            szBasePath: "/jsplugin",
+            oStyle: {
+                border: "#343434",
+                borderSelect: "red",
+                background: "#4C4B4B"
+            }
+        });
+
+        const gridContainer = jsPluginContainer.firstElementChild;
+        const gridElems = jsPluginContainer._select('*', true);
+
+        gridContainer.id = 'camera-grid';
+        gridContainer._addClass(gridOptions[configOptions.gridSize]);
+
+        //Quitamos los estilos y tamaños que JSPlugin asigna
+        gridElems.forEach((e) => {
+            e.removeAttribute('style');
+            e.removeAttribute('width');
+            e.removeAttribute('height');
+        });
+
         if (! dataObj.filtered.length) {
-            gridContainer.innerHTML = '<h2 class="t-center">No se contraron resultados</h2>';
+            showSnackbar('<h2 class="t-center">No se contraron resultados</h2>', 'warning');
 
             return false;
         }
 
-        gridContainer.appendChild(gridPreloader);
+        gridWrapper.appendChild(gridPreloader);
         
         //Limpiamos todo
         Object.keys(playersStatus).forEach(p => delete playersStatus[p]);
@@ -348,24 +392,58 @@
             to: (configOptions.currentPage * itemsPerPage[configOptions.gridSize]) - 1,
         }
 
-        for (let i = range.from; i <= range.to; i++) {
-            const camera = dataObj.filtered[i];
+        let iterationNum = 0;
 
-            if (! camera) { break; }
+        for (let i = range.from; i <= range.to; i++) {
+            const camIndex = iterationNum;
+            const camera = dataObj.filtered[i];
+            const videoPlayerContainer = q(`#${videoPlayerContainerIdIndex}${camIndex}`);
+            const videoPlayer = q(`#${videoPlayerIdIndex}${camIndex}`);
+            const jqObj = Object.keys(videoPlayerContainer)?.[0];
+
+            //Le quitamos los eventos para fullscreen y otros eventos agregados por JSPlugin al elemento video
+            if (jqObj) {
+                //delete videoPlayerContainer[jqObj].events.dblclick[0].handler;;
+                //delete videoPlayerContainer[jqObj].events.dblclick;
+                delete videoPlayerContainer[jqObj];
+            }
+
+            //Agregamos nuestra propia versión de fullscreen
+            videoPlayerContainer._on('dblclick', (evt) => {
+                const exitFS = ['exitFullscreen', 'webkitExitFullscreen', 'mozExitFullscreen', 'msExitFullscreen'];
+                const elcFS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'];
+                const docFSE = ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'];
+                const fsExitFnc = exitFS.filter(f => document?.[f])?.[0];
+                const fsFnc = elcFS.filter(f => videoPlayerContainer?.[f])?.[0];
+                const isFullscreen = docFSE.some(f => document?.[f]);
+
+                if (! isFullscreen) {
+                    if (fsFnc) { videoPlayerContainer[fsFnc](); }
+                } else {
+                    if (fsExitFnc) { document[fsExitFnc](); }
+                }
+            });
+
+            if (! camera) {
+                iterationNum++;
+
+                continue;
+            }
 
             const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
             const isOnline = camera?.status && camera.status.toString() == '1';
             const isPTZ = camera?.capabilitySet && camera.capabilitySet.toLowerCase().includes('ptz');
             const favoriteHighLight = ! configOptions.favorites.includes(camera.cameraIndexCode) ? '': ' info';
-            const videoPlayerWrapper = create('div', false, {className: 'video-player-wrapper'});
-            const videoPlayerContainer = create('div', {id: `video-player-container-${camera.cameraIndexCode}`}, {className: 'video-player-container'});
             const preloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
             const nameBadge = `<span class="small">${cameraFullName}</span>`;
             const onlineBadge = '<a-badge danger pulse>Online</a-badge>';
             const offlineBadge = '<a-badge danger pulse>Offline</a-badge>';
             const statusBadge = ! isOnline ? offlineBadge : '';
+            const videoPlayerContainerElements = videoPlayerContainer._select('*', true);
 
-            videoPlayerWrapper.innerHTML = `
+            videoPlayerContainerElements.forEach((e) => { e._remove(); });
+
+            videoPlayerContainer.innerHTML = `
                 <div class="refresh-btn-container">
                     <a-button icon circle id="refresh-${camera.cameraIndexCode}" aria-label="Recargar Cámera" disabled class="${! isOnline ? '' : 'd-none'}"><an-icon refresh></an-icon></a-button>
                 </div>
@@ -404,25 +482,12 @@
                     <div class="stream-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error del servidor de streaming</div>
                 </div>
             `;
-
             videoPlayerContainer.style.backgroundImage = ! camera?.capture?.length ? `url(./img/camera-bg-placeholder.jpg)` : `url(${camera.capture})`;
 
-            videoPlayerWrapper.appendChild(videoPlayerContainer);
-            gridContainer.appendChild(videoPlayerWrapper);
+            videoPlayerContainerElements.forEach((e) => { videoPlayerContainer.appendChild(e); });
             
-            const btnRefresh = q(`#refresh-${camera.cameraIndexCode}`);
-            const btnPlay = q(`#play-stop-${camera.cameraIndexCode}`);
-            const btnCapure = q(`#capure-${camera.cameraIndexCode}`);
-            const btnPtz = q(`#ptz-${camera.cameraIndexCode}`);
-            const btnStreamSwitch = q(`#stream-switch-${camera.cameraIndexCode}`);
-            const btnFavorite = q(`#favorite-${camera.cameraIndexCode}`);
-            const cameraStatusMsg = q(`#camera-status-msg-${camera.cameraIndexCode}`);
-            const streamErrorMsg = q(`#stream-error-msg-${camera.cameraIndexCode}`);
-
             playersStatus[camera.cameraIndexCode] = {
                 isOnline,
-                JSPlugin: false,
-                videoPlayer: {},
                 isPlaying: false,
                 isMainStream: false,
                 captureRetry: false,
@@ -431,9 +496,17 @@
             }
 
             const vpStatus = playersStatus[camera.cameraIndexCode];
+            const btnRefresh = q(`#refresh-${camera.cameraIndexCode}`);
+            const btnPlay = q(`#play-stop-${camera.cameraIndexCode}`);
+            const btnCapure = q(`#capure-${camera.cameraIndexCode}`);
+            const btnPtz = q(`#ptz-${camera.cameraIndexCode}`);
+            const btnStreamSwitch = q(`#stream-switch-${camera.cameraIndexCode}`);
+            const btnFavorite = q(`#favorite-${camera.cameraIndexCode}`);
+            const cameraStatusMsg = q(`#camera-status-msg-${camera.cameraIndexCode}`);
+            const streamErrorMsg = q(`#stream-error-msg-${camera.cameraIndexCode}`);
             
             const imBusy = () => {
-                videoPlayerWrapper.appendChild(preloader);
+                videoPlayerContainer.appendChild(preloader);
 
                 [btnRefresh, btnPlay, btnCapure, btnPtz, btnStreamSwitch, btnFavorite].forEach(b => b.setAttr = 'disabled');
             };
@@ -491,7 +564,7 @@
     
                 if (! vpStatus.isPlaying) {
                     if (! camera?.captureTimestamp || (timeStamp - camera.captureTimestamp) > captureMinTimeBetweenUpdates) {
-                        const capture = await runFetch(apiServerUrl + endpoints.protected.capture, {
+                        const capture = await runFetch(endpoints.protected.capture, {
                             method: 'POST',
                             headers: {
                                 authorization: `Bearer ${configOptions.token}`
@@ -518,9 +591,9 @@
                     const canvas = create('canvas');
                     const context = canvas.getContext('2d');
     
-                    canvas.width = vpStatus.video.videoWidth;
-                    canvas.height = vpStatus.video.videoHeight;
-                    context.drawImage(vpStatus.video, 0, 0, canvas.width, canvas.height);
+                    canvas.width = videoPlayer.videoWidth;
+                    canvas.height = videoPlayer.videoHeight;
+                    context.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
                     
                     capturedPicture = canvas.toDataURL('image/png');
 
@@ -546,106 +619,61 @@
 
             const playStopStream = async (isMainStream = false) => {
                 if (! vpStatus.isOnline) { return false; }
-    
-                if (! vpStatus.JSPlugin) {
-                    vpStatus.JSPlugin = new JSPlugin({
-                        szId: videoPlayerContainer.id,
-                        iWidth: '100%',
-                        iHeight: '100%',
-                        iMaxSplit: 1,
-                        iCurrentSplit: 1,
-                        szBasePath: "/jsplugin",
-                        oStyle: {
-                            border: "none",
-                            borderSelect: "transparent",
-                            background: "none"
-                        }
-                    });
-                }
+
+                imBusy();
+
+                const stremUrl = ! isMainStream ? camera.subStream : camera.mainStream;
     
                 if (! vpStatus.isPlaying) {
-                    try {
-                        console.log(`Iniciando transmisión de cámara ${camera.cameraIndexCode}`);
+                    await new Promise((resolve) => {
+                        jsDecoder.JS_Play(stremUrl, {
+                            playURL: stremUrl,
+                            auth: '',
+                            token: '',
+                            mode: 'media',
+                        }, camIndex).then(async () => {
+                            vpStatus.isPlaying = true;
+                            vpStatus.isMainStream = isMainStream;
+                            vpStatus.streamError = false;
 
-                        imBusy();
-                        
-                        await vpStatus.JSPlugin.JS_Play(camera.subStream, {
-                            playURL: ! isMainStream ? camera.subStream : camera.mainStream,
-                            auth: "",
-                            mode: "media",
-                            token: ""
-                        }, 0);
+                            console.log(`Transmisión de la cámara ${camIndex} (${camera.cameraIndexCode}) iniciada satisfactoriamente`);
 
-                        vpStatus.video = videoPlayerContainer.querySelector('video');
-                        vpStatus.isPlaying = true;
-                        vpStatus.isMainStream = isMainStream;
-                        vpStatus.streamError = false;
-                        
-                        if (vpStatus.video?.parentNode) {
-                            const jqObj = Object.keys(vpStatus.video.parentNode)?.[0]
+                            return resolve(true);
+                        }, () => {
+                            vpStatus.streamError = true;
                             
-                            //Le quitamos los eventos para fullscreen y otros eventos agregados por JSPlugin al elemento video
-                            if (jqObj) {
-                                //delete vpStatus.video.parentNode[jqObj].events.dblclick[0].handler;;
-                                //delete vpStatus.video.parentNode[jqObj].events.dblclick;
-                                delete vpStatus.video.parentNode[jqObj];
-                            }
-                        }
+                            showSnackbar(`No se pudo inicar la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
 
-                        imNotBusy();
-
-                        //Tomamos la foto en un timeout poque la imagen tarde un poquito en aparecer
-                        setTimeout(() => { takePicture(); }, 500);
-
-                        console.log(`Transmisión de cámara ${camera.cameraIndexCode} iniciada satisfactoriamente`);
-                    } catch(err) {
-                        vpStatus.streamError = true;
-                        
-                        showSnackbar(`No se pudo inicar la transmisión de la cámara ${camera.cameraIndexCode}`, 'warning');
-
-                        imNotBusy();
-
-                        console.error(err);
-                    }
+                            return resolve(false);
+                        });
+                    });
                 } else {
-                    console.log(`Deteniendo transmisión de cámara ${camera.cameraIndexCode}`);
-    
-                    try {
-                        await takePicture();
+                    imNotBusy();
 
-                        imBusy();
+                    await takePicture();
 
-                        vpStatus.JSPlugin.JS_Stop(0);
+                    imBusy();
 
-                        vpStatus.video = {};
-                        vpStatus.isPlaying = false;
-                        vpStatus.isMainStream = false;
+                    await new Promise((resolve) => {
+                        jsDecoder.JS_Stop(camIndex).then(() => {
+                            console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
 
-                        imNotBusy();
-                    } catch (err) {
-                        imNotBusy();
+                            vpStatus.isPlaying = false;
+                            vpStatus.isMainStream = false;
 
-                        console.error(err);
-                    }
+                            return resolve(true);
+                        }, () => {
+                            showSnackbar(`Error al detener la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
+
+                            return resolve(false);
+                        });
+                    });
                 }
+
+                imNotBusy();
 
                 return true;
             }
-
-            videoPlayerWrapper._on('dblclick', (evt) => {
-                const exitFS = ['exitFullscreen', 'webkitExitFullscreen', 'mozExitFullscreen', 'msExitFullscreen'];
-                const elcFS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'];
-                const docFSE = ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'];
-                const fsExitFnc = exitFS.filter(f => document?.[f])?.[0];
-                const fsFnc = elcFS.filter(f => videoPlayerWrapper?.[f])?.[0];
-                const isFullscreen = docFSE.some(f => document?.[f]);
-
-                if (! isFullscreen) {
-                    videoPlayerWrapper[fsFnc]();
-                } else {
-                    document[fsExitFnc]();
-                }
-            });
 
             btnPlay._on('click', async (evt) => {
                 evt.preventDefault();
@@ -694,7 +722,7 @@
 
                 imBusy();
 
-                const cameraCheck = await runFetch(apiServerUrl + endpoints.protected.integralSingle, {
+                const cameraCheck = await runFetch(endpoints.protected.integralSingle, {
                     method: 'POST',
                     headers: {
                         authorization: `Bearer ${configOptions.token}`
@@ -724,7 +752,7 @@
 
                 if (! camera?.captureTimestamp) {
                     (async () => {
-                        console.log('Tomando foto remota a', camera.cameraIndexCode);
+                        console.log(`Tomando foto remota a la cámara ${camIndex} (${camera.cameraIndexCode})`);
     
                         await takePicture();
     
@@ -733,11 +761,13 @@
     
                             vpStatus.captureRetry = true;
 
-                            console.log('Intentaremos tomar la foto remota de nuevo a', camera.cameraIndexCode);
+                            console.log(`Intentaremos tomar la foto remota de nuevo a la cámara ${camIndex} (${camera.cameraIndexCode})`);
                         }
                     })();
                 }
             }
+
+            iterationNum++;
         }
 
         gridPreloader._remove();
@@ -864,7 +894,7 @@
         disableForm(filtersDialog.$el['filters-form']);
 
         await stopAllPlayers();
-
+        
         await filterData();
 
         await createGrid();
@@ -877,7 +907,7 @@
     if (! configOptions.token) {
         if (! await login()) { return false; }
 
-        const version = await runFetch(apiServerUrl + endpoints.protected.version, {
+        const version = await runFetch(endpoints.protected.version, {
             method: 'POST',
             headers: {
                 authorization: `Bearer ${configOptions.token}`
@@ -887,7 +917,7 @@
         console.log(version);
     }
 
-    const authCheck = await runFetch(apiServerUrl + endpoints.protected.authCheck, {
+    const authCheck = await runFetch(endpoints.protected.authCheck, {
         method: 'POST',
         headers: {
             authorization: `Bearer ${configOptions.token}`
@@ -907,7 +937,7 @@
             showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. <br>Ejecutaremos una nueva actualización</p>`, 'info');
         }
 
-        dataObj.remote = await runFetch(apiServerUrl + endpoints.protected.integral, {
+        dataObj.remote = await runFetch(endpoints.protected.integral, {
             method: 'POST',
             headers: {
                 authorization: `Bearer ${configOptions.token}`
@@ -1052,15 +1082,12 @@
     });
     toolsForm.elements['grid-size-select'].value = configOptions.gridSize;
 
-    gridContainer.className = gridOptions[configOptions.gridSize];
-
-    //Fix para fullscreen en pantallas diferentes a mi laptop
+    //Fix para fullscreen en pantallas diferentes a mi laptop tomando en cuenta el tamaño aproximado del scrollbar
     document.body.appendChild(create('style', false, {innerHTML: `
         :root { --max-width: ${Math.round(screen.width / 1.347368421052632)}px; }
-        #camera-grid-wrapper:full-screen { --max-width: ${screen.width}px; }
-        #camera-grid-wrapper:-webkit-full-screen { --max-width: ${screen.width}px; }
-        #camera-grid-wrapper:-moz-full-screen { --max-width: ${screen.width}px; }
-        #camera-grid-wrapper:-ms-full-screen { --max-width: ${screen.width}px; }
+        #camera-grid:-webkit-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
+        #camera-grid:-moz-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
+        #camera-grid:-ms-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
     `}));
 
     //Esta viene siendo la acción del search
@@ -1108,8 +1135,6 @@
         saveConfig();
 
         await reCreateGrid();
-
-        gridContainer.className = gridOptions[configOptions.gridSize];
     });
     
     filtersDialog.$el['filters-form']._onsubmit = (evt, frm, frmData) => {
@@ -1217,14 +1242,15 @@
     btnStopAll._on('click', (evt) => { stopAllPlayers(); });
 
     btnFullscreenAll._on('click', (evt) => {
+        const gridContainer = q('#camera-grid') || {};
         const elcFS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'];
         const docFSE = ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'];
-        const fsFnc = elcFS.filter(f => gridContainerWrapper?.[f])?.[0];
+        const fsFnc = elcFS.filter(f => gridContainer?.[f])?.[0];
         const isFullscreen = docFSE.some(f => document?.[f]);
 
-        if (! isFullscreen) {
-            gridContainerWrapper[fsFnc]();
-        }
+        console.log(gridContainer);
+
+        if (! isFullscreen && fsFnc) { gridContainer[fsFnc](); }
     });
 
     btnRefreshAll._on('click', (evt) => {
@@ -1232,6 +1258,7 @@
     });
 
     await reCreateGrid();
+
 
     if (! dataObj.filtered.length) {
         showSnackbar('No se encontraron resultados', 'warning');

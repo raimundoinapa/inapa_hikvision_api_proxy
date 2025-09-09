@@ -74,24 +74,48 @@
             
             #tools-form { padding-top: 0.5rem; }
 
+            .grid-4x4 { --grid-divisor: 4; }
+            .grid-3x3 { --grid-divisor: 3; }
+            .grid-2x2 { --grid-divisor: 2; }
+            .grid-1x1 { --grid-divisor: 1; }
             #camera-grid {
                 display: grid;
+                /*
+                Cálculo para el grid 4x4
+                grid-template-columns: repeat(auto-fit, minmax(calc((1425 - (15 * 2) - (10 * (4 - 1))) / 4), 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(341.25px, 1fr));
+                */
+                grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * (var(--grid-divisor) - 1))) / var(--grid-divisor)), 1fr));
                 gap: var(--gap);
                 overflow: hidden;
             }
-                .grid-4x4 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 3)) / 4), 1fr)); }
-                .grid-3x3 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 2)) / 3), 1fr)); }
-                .grid-2x2 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 1)) / 2), 1fr)); }
-                .grid-1x1 { grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * 0)) / 1), 1fr)); }
 
-            .video-player-wrapper {
+            [id^="jsPluginGridContainerplayer"] {
                 position: relative;
                 aspect-ratio: 16 / 9;
                 color: var(--bg-color-3);
                 background-color: var(--bg-color-3);
+                background-repeat: no-repeat;
+                background-position: center;
+                background-size: 100% 100%;
             }
-                .video-player-wrapper .preloader { color: var(--text-color-1); }
-                .video-player-container { background-size: cover; }
+
+                [id^="jsPluginGridContainerplayer"] .preloader { color: var(--text-color-1); }
+                [id^="jsPluginGridContainerplayer"]:hover .refresh-btn-container,
+                [id^="jsPluginGridContainerplayer"]:hover .video-controls {
+                    opacity: 1;
+                }
+                [id^="jsPluginGridContainerplayer"] img,
+                [id^="jsPluginGridContainerplayer"] canvas {
+                    position: absolute;
+                    visibility: hidden;
+                }
+                [id^="jsPluginGridContainerplayer"] video {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: fill;
+                }
+
                 .video-controls,
                 .camera-status-container,
                 .camera-name-container,
@@ -128,11 +152,6 @@
                         gap: 1rem;
                     }
 
-                .video-player-wrapper:hover .refresh-btn-container,
-                .video-player-wrapper:hover .video-controls {
-                    opacity: 1;
-                }
-
                 .camera-status-container {
                     bottom: 0;
                     right: 0;
@@ -156,16 +175,6 @@
                     z-index: 999;
                 }
 
-                .video-player-container {
-                    position: relative;
-                    height: 100%;
-                }
-                    .video-player-container [id^="video-player"] {
-                        width: 100% !important;
-                        height: 100% !important;
-                        border: none !important;
-                    }
-
             @media screen and (max-width: 1174px) {
                 #logo {
                     top: 12px;
@@ -180,30 +189,33 @@
                 }
             }
 
-            #camera-grid-wrapper:-webkit-full-screen {
+            #camera-grid:-webkit-full-screen {
                 --max-width: 1536px;/*Resolución 1920x1080 con un Scale de 125%*/
                 --padding: 0px;
                 --gap: 0px;
+                overflow: auto;
             }
-                #camera-grid-wrapper:-webkit-full-screen .video-player-container {
+                #camera-grid:-webkit-full-screen [id^="jsPluginGridContainerplayer"] {
                     border: 1px solid rgba(255, 255, 255, .5);
                 }
 
-            #camera-grid-wrapper:-moz-full-screen {
+            #camera-grid:-moz-full-screen {
                 --max-width: 1536px;
                 --padding: 0px;
                 --gap: 0px;
+                overflow: auto;
             }
-                #camera-grid-wrapper:-moz-full-screen .video-player-container {
+                #camera-grid:-moz-full-screen [id^="jsPluginGridContainerplayer"] {
                     border: 1px solid rgba(255, 255, 255, .5);
                 }
 
-            #camera-grid-wrapper:-ms-full-screen {
+            #camera-grid:-ms-full-screen {
                 --max-width: 1536px;
                 --padding: 0px;
                 --gap: 0px;
+                overflow: auto;
             }
-                #camera-grid-wrapper:-ms-full-screen .video-player-container {
+                #camera-grid:-ms-full-screen [id^="jsPluginGridContainerplayer"] {
                     border: 1px solid rgba(255, 255, 255, .5);
                 }
         </style>
@@ -277,9 +289,7 @@
             </div>
 
             <div id="camera-grid-wrapper">
-                <div class="container">
-                    <div id="camera-grid" class="grid-4x4"></div>
-                </div>
+                <div id="jsPluginGridContainer" class="container"></div>
             </div>
             
             <div class="container mt1">

@@ -20,7 +20,7 @@
             dialogs: [],
             elementHistory: [],
             pushState: function(id, fnc) {
-                let currentState = ! this.elementHistory.length ? {} : this.elementHistory[this.elementHistory.length -1];
+                const currentState = ! this.elementHistory.length ? {} : this.elementHistory[this.elementHistory.length -1];
                 
                 //Si el id enviado es diferente al id del estado actual, hacemos el push
                 if (! currentState || ! currentState.id || currentState.id != id) {
@@ -43,7 +43,7 @@
                 * Asuminos que todo lo que se ejecuta por popstate ha sido ejecutado con el back button
                 * haciendo caso omiso al forward button para simplificar la interfaz de usuario
                 */
-                let currentState = this.elementHistory[this.elementHistory.length -1];
+                const currentState = this.elementHistory[this.elementHistory.length -1];
         
                 //Si el id enviado es diferente al id del estado actual, hacemos el push
                 if (currentState && currentState.id && currentState.fnc) { currentState.fnc(e, currentState.id); }
@@ -312,7 +312,7 @@
 
         if ('string' == typeof options) { options = [options]; }
 
-        let observer = new MutationObserver((mutations) => {
+        const observer = new MutationObserver((mutations) => {
             if (onlyAttributes) {
                 const m = mutations[0];
 
@@ -663,26 +663,12 @@
         const evtName = args[0];
         const fnc = args[1];
 
-        if ('attributechange' == evtName) {
-            if (this._attributeChangeEvent) { this._attributeChangeEvent.disconnect(); }
+        const evtNames = ['attributechange', 'classchange', 'textchange', 'childrenchange'];
+        const thisEvtNames = ['_attributeChangeEvent', '_classChangeEvent', '_textChangeEvent', '_childrenChangeEvent'];
+        const evtIndex = evtNames.indexOf(evtName);
 
-            return false;
-        }
-
-        if ('classchange' ==  evtName) {
-            if (this._classChangeEvent) { this._classChangeEvent.disconnect(); }
-
-            return false;
-        }
-
-        if ('textchange' ==  evtName) {
-            if (this._textChangeEvent) { this._textChangeEvent.disconnect(); }
-
-            return false;
-        }
-
-        if ('childrenchange' ==  evtName) {
-            if (this._childrenChangeEvent) { this._childrenChangeEvent.disconnect(); }
+        if (evtIndex + 1) {
+            if (this?.[thisEvtNames[evtIndex]]) { this[thisEvtNames[evtIndex]].disconnect(); }
 
             return false;
         }
@@ -957,22 +943,9 @@
     const disableElement = function() { disableForm({elements: [...arguments]}); }
     const enableElement = function() { enableForm({elements: [...arguments]}); }
 
-    /* Funciones para Cookies */
-    const getCookies = (cookieName = '') => {
-        const cookies = decodeURIComponent(document.cookie).split(';').map((c) => c.trim());
-
-        if (! cookieName) { return cookies; }
-
-        for (const c of cookies) {
-            if (c.startsWith(cookieName + '=')) { return c.split('=')[0]; }
-        }
-        
-        return '';
-    }
-
+    /* Funciones para números */
     const isFloat = n => ('number' == typeof n && ! Number.isNaN(n) && ! Number.isInteger(n)) || /^\-?\d+(\.{1}\d+)?$/.test(n)
 
-    /* Funciones para números */
     //https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
     const roundToTwo = function(num, formatLocale) {
         /*
@@ -999,13 +972,13 @@
     const shuffle = (arr = []) => {
         const arrTemp = [];
 
-        const ramdomPick = () => {
+        const randomPick = () => {
             arrTemp.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
 
-            if (arr.length) { ramdomPick(); }
+            if (arr.length) { randomPick(); }
         }
 
-        ramdomPick();
+        randomPick();
         
         return arrTemp;
     }
@@ -1102,6 +1075,18 @@
     }
 
     /* Funciones para cookies, localStorage y sessionStorage */
+    const getCookies = (cookieName = '') => {
+        const cookies = decodeURIComponent(document.cookie).split(';').map((c) => c.trim());
+
+        if (! cookieName) { return cookies; }
+
+        for (const c of cookies) {
+            if (c.startsWith(cookieName + '=')) { return c.split('=')[0]; }
+        }
+        
+        return '';
+    }
+    
     const clearStorage = () => {
         return new Promise(async (resolve) => {
             document.cookie.split(';').forEach((c) => { document.cookie = `${c.split('=').shift().trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`; });
@@ -1199,7 +1184,7 @@
         });
     }
     
-    /* Función para fetch */
+    /* Funciones para fetch, carga de imágenes y otros recursos */
     const runFetch = async (endpoint = '', options = {}, hasCustomUpperLevelOptions = false) => {
         if (! endpoint || 'string' !== typeof endpoint || '' == endpoint.trim()) {
             throw new Error('Invalid or missing endpoint');
@@ -1291,8 +1276,9 @@
             const contentTypeMethodKeywords = {
                 json: ['json'],
                 text: ['text', 'html', 'css', 'javascript', 'xml'],
-                blob: ['octet-stream', 'image', 'audio', 'video', 'pdf'],
-                formData: ['multipart', 'form-data']
+                formData: ['multipart', 'form'],
+                blob: ['octet', 'image', 'audio', 'video', 'pdf', 'blob'],
+                arrayBuffer: ['buffer']
             };
             const contentType = Object.keys(contentTypeMethodKeywords).find((k) => 
                 contentTypeMethodKeywords[k].some((w) => 
@@ -1342,23 +1328,6 @@
         return result;
     };
 
-    const setSessionGetToken = async () => {
-        const token = await runFetch('./set-session-get-token', {cache: 'no-store', credentials: 'include'})?.data?.clientToken;
-
-        if (token) {
-            app.doc.dataset.clientToken = token;
-
-            const ctMeta = select('[name="clientokent-token"]');
-
-            if (ctMeta) { ctMeta.content = token; }
-
-            return token;
-        }
-
-        return false;
-    };
-
-    /* Funciones para carga de imágenes y otros recursos */
     const loadImage = (params = {url: '', proxy: '', isBase64: false, crossOrigin: 'Anonymous', fnc: false}) => {
         params.proxy = ! params.proxy ? '' : (true === params.proxy ? 'https://cors-anywhere.herokuapp.com/' : params.proxy);
 
@@ -1401,44 +1370,40 @@
     }
 
     //Url de archivo, source de archivo, file de input file
-    const loadFileContent = (file = '' || {}, mode = 'text' || 'json' || 'arrayBuffer' || 'buffer' || 'blob' ||  'readAsBinaryString' || 'binary' || 'readAsDataURL' || 'base64', abortTime = false) => {
+    const loadFileContent = (file = '' || {}, mode = 'application/json', abortTime = false) => {
         return new Promise(async (resolve, reject) => {
             if ('string' == typeof file) {
-                try {
-                    const params = {cache: 'reload'};
-
-                    if (abortTime && /\d+/.test(abortTime)) {
-                        const controller = new AbortController();
-
-                        params.signal = controller.signal;
-    
-                        setTimeout(() => { controller.abort(); }, abortTime);
-                    }
-
-                    const modes = {text: 'text', json: 'json', arrayBuffer: 'arrayBuffer', buffer: 'arrayBuffer', blob: 'blob'};
-                    const fileFetch = await fetch(file, params);
-
-                    fileFetch.clone = fileFetch.clone();
-                    fileFetch.httpStatusCode = fileFetch.status;
-
-                    if (fileFetch[modes[mode]]) {
-                        file = await fileFetch[modes[mode]]();
-
-                        return resolve(file);
-                    }
-
-                    //Si no se eligió un método disponible el fetch, asumimos que a blob por defecto para que este blob sea tratado por FileReader ya sea con readAsBinaryString ó readAsDataURL
-                    file = await fileFetch.blob();
-                } catch (err) {
-                    console.error('Error: ', err);
+                const params = {
+                    cache: 'reload',
+                    headers: {
+                        'content-type': 'application/json'	
+                    },
+                    timeout: 60000
+                };
         
-                    return reject(err);
-                }
+                if (mode) { params.headers['content-type'] = mode; }
+        
+                if (abortTime) { params.timeout = abortTime; }
+    
+                const result = await runFetch(file, params);
+
+                return resolve(result);
             }
 
-            const modes = {readAsText: 'readAsText', text: 'readAsText', readAsArrayBuffer: 'readAsArrayBuffer', arrayBuffer: 'readAsArrayBuffer', buffer: 'readAsArrayBuffer', readAsBinaryString: 'readAsBinaryString', binary: 'readAsBinaryString', readAsDataURL: 'readAsDataURL', base64: 'readAsDataURL'};
+            const modeKeywords = {
+                readAsText: ['json', 'text', 'html', 'css', 'javascript', 'xml'],
+                readAsDataURL: ['image', 'dataurl', 'base64'],
+                readAsBinaryString: ['octet', 'audio', 'video', 'pdf', 'blob'],
+                readAsArrayBuffer: ['buffer'],
+            };
+            const contentType = Object.keys(modeKeywords).find((k) => 
+                modeKeywords[k].some((w) => 
+                    mode.toLowerCase().includes(w.toLowerCase())
+                )
+            ) || 'readAsText';
             const reader = new FileReader();
-            reader[modes[mode]](file);
+
+            reader[contentType](file);
             reader.onload = (e) => { return resolve(e.target.result); }
             reader.onerror = (err) => {
                 console.error('Error: ', err);
@@ -1447,6 +1412,22 @@
             }
         });
     }
+
+    const setSessionGetToken = async () => {
+        const token = await runFetch('./set-session-get-token', {cache: 'no-store', credentials: 'include'})?.data?.clientToken;
+
+        if (token) {
+            app.doc.dataset.clientToken = token;
+
+            const ctMeta = select('[name="clientokent-token"]');
+
+            if (ctMeta) { ctMeta.content = token; }
+
+            return token;
+        }
+
+        return false;
+    };
 
     /* Utilitarios para Scraping */
     //Query simple, no añade metodos a los resultados

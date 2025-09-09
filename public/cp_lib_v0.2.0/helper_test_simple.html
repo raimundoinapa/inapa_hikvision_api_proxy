@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPLib Helper v0.2.0 - Essential Test Suite</title>
+    
+    <!-- CPLib Files -->
+    <link href="css/helper.css" rel="stylesheet">
+    <script src="js/helper.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .test-case { margin: 10px 0; padding: 10px; background: white; border-radius: 3px; }
+        .test-button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .test-result { margin: 5px 0; padding: 5px; border-radius: 3px; }
+        .test-pass { background: #d4edda; color: #155724; }
+        .test-fail { background: #f8d7da; color: #721c24; }
+        .test-info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🧪 CPLib Helper v0.2.0 - Essential Test Suite</h1>
+    <p>This test suite covers the most critical functions in helper.js to identify missing implementations.</p>
+    
+    <div class="test-section">
+        <h2>📊 Test Summary</h2>
+        <div id="test-summary">
+            <div>Total Tests: <span id="total-tests">0</span></div>
+            <div>Passed: <span id="passed-tests" style="color: green;">0</span></div>
+            <div>Failed: <span id="failed-tests" style="color: red;">0</span></div>
+        </div>
+        <button class="test-button" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button class="test-button" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <!-- Test Elements -->
+    <div id="test-elements">
+        <div id="test-div" class="test-element">Test Div</div>
+        <span id="test-span" class="test-element">Test Span</span>
+        <button id="test-button" class="test-element">Test Button</button>
+        <input id="test-input" type="text" value="Test Input" class="test-element">
+        <form id="test-form" class="test-element">
+            <input type="text" name="test-field" value="Test Field">
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <div class="test-section">
+        <h2>🏗️ Core App Functions</h2>
+        
+        <div class="test-case">
+            <h4>app.set() - Set storage value</h4>
+            <button class="test-button" onclick="testAppSet()">Test</button>
+            <div id="app-set-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>app.get() - Get storage value</h4>
+            <button class="test-button" onclick="testAppGet()">Test</button>
+            <div id="app-get-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>app.remove() - Remove storage value</h4>
+            <button class="test-button" onclick="testAppRemove()">Test</button>
+            <div id="app-remove-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 DOM Selection Functions</h2>
+        
+        <div class="test-case">
+            <h4>select() - Single element selection</h4>
+            <button class="test-button" onclick="testSelect()">Test</button>
+            <div id="select-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>select() - Multiple elements selection</h4>
+            <button class="test-button" onclick="testSelectAll()">Test</button>
+            <div id="select-all-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>selectByContent() - Select by text content</h4>
+            <button class="test-button" onclick="testSelectByContent()">Test</button>
+            <div id="select-by-content-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Element Manipulation Functions</h2>
+        
+        <div class="test-case">
+            <h4>addClass() - Add CSS class</h4>
+            <button class="test-button" onclick="testAddClass()">Test</button>
+            <div id="add-class-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>removeClass() - Remove CSS class</h4>
+            <button class="test-button" onclick="testRemoveClass()">Test</button>
+            <div id="remove-class-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>hasClass() - Check if element has class</h4>
+            <button class="test-button" onclick="testHasClass()">Test</button>
+            <div id="has-class-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>⚡ Event System Functions</h2>
+        
+        <div class="test-case">
+            <h4>_on() - Add event listener</h4>
+            <button class="test-button" onclick="testOn()">Test</button>
+            <div id="on-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>_removeOn() - Remove event listener</h4>
+            <button class="test-button" onclick="testRemoveOn()">Test</button>
+            <div id="remove-on-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>dispatchEvent() - Dispatch custom event</h4>
+            <button class="test-button" onclick="testDispatchEvent()">Test</button>
+            <div id="dispatch-event-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>👁️ Observer Functions</h2>
+        
+        <div class="test-case">
+            <h4>observeMutation() - General mutation observer</h4>
+            <button class="test-button" onclick="testObserveMutation()">Test</button>
+            <div id="observe-mutation-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>observeAttributes() - Attribute change observer</h4>
+            <button class="test-button" onclick="testObserveAttributes()">Test</button>
+            <div id="observe-attributes-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🛠️ Utility Functions</h2>
+        
+        <div class="test-case">
+            <h4>generateID() - Generate unique ID</h4>
+            <button class="test-button" onclick="testGenerateID()">Test</button>
+            <div id="generate-id-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>create() - Create DOM element</h4>
+            <button class="test-button" onclick="testCreate()">Test</button>
+            <div id="create-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-case">
+            <h4>runFetch() - Make HTTP request</h4>
+            <button class="test-button" onclick="testRunFetch()">Test</button>
+            <div id="run-fetch-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test state management
+        let testResults = { total: 0, passed: 0, failed: 0 };
+
+        function logTestResult(testId, passed, message, details = '') {
+            const resultElement = document.getElementById(testId);
+            const statusClass = passed ? 'test-pass' : 'test-fail';
+            const statusIcon = passed ? '✅' : '❌';
+            
+            resultElement.innerHTML = `
+                <div class="${statusClass}">
+                    ${statusIcon} ${message}
+                    ${details ? `<div style="font-size: 12px; margin-top: 5px;">${details}</div>` : ''}
+                </div>
+            `;
+            
+            testResults.total++;
+            if (passed) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+            updateTestSummary();
+        }
+
+        function updateTestSummary() {
+            document.getElementById('total-tests').textContent = testResults.total;
+            document.getElementById('passed-tests').textContent = testResults.passed;
+            document.getElementById('failed-tests').textContent = testResults.failed;
+        }
+
+        function clearResults() {
+            testResults = { total: 0, passed: 0, failed: 0 };
+            document.querySelectorAll('.test-result').forEach(el => el.innerHTML = '');
+            updateTestSummary();
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            // Run all test functions
+            const testFunctions = [
+                'testAppSet', 'testAppGet', 'testAppRemove',
+                'testSelect', 'testSelectAll', 'testSelectByContent',
+                'testAddClass', 'testRemoveClass', 'testHasClass',
+                'testOn', 'testRemoveOn', 'testDispatchEvent',
+                'testObserveMutation', 'testObserveAttributes',
+                'testGenerateID', 'testCreate', 'testRunFetch'
+            ];
+            
+            testFunctions.forEach(funcName => {
+                try {
+                    if (typeof window[funcName] === 'function') {
+                        window[funcName]();
+                    }
+                } catch (error) {
+                    console.error(`Error running test ${funcName}:`, error);
+                }
+            });
+        }
+
+        // ========================================
+        // CORE APP FUNCTIONS TESTS
+        // ========================================
+        
+        function testAppSet() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_key_' + Date.now();
+                const testValue = 'test_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const retrieved = app.get(testKey);
+                
+                const passed = retrieved === testValue;
+                logTestResult('app-set-result', passed, 
+                    passed ? 'app.set() works correctly' : 'app.set() failed to store value',
+                    `Key: ${testKey}, Expected: ${testValue}, Got: ${retrieved}`
+                );
+            } catch (error) {
+                logTestResult('app-set-result', false, 'app.set() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppGet() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_get_key_' + Date.now();
+                const testValue = 'test_get_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const retrieved = app.get(testKey);
+                const nonExistent = app.get('non_existent_key_' + Date.now());
+                
+                const passed = retrieved === testValue && nonExistent === undefined;
+                logTestResult('app-get-result', passed,
+                    passed ? 'app.get() works correctly' : 'app.get() failed to retrieve value',
+                    `Retrieved: ${retrieved}, Non-existent: ${nonExistent}`
+                );
+            } catch (error) {
+                logTestResult('app-get-result', false, 'app.get() threw error: ' + error.message);
+            }
+        }
+        
+        function testAppRemove() {
+            try {
+                const { app } = __CPLIB__;
+                const testKey = 'test_remove_key_' + Date.now();
+                const testValue = 'test_remove_value_' + Math.random();
+                
+                app.set(testKey, testValue);
+                const beforeRemove = app.get(testKey);
+                app.remove(testKey);
+                const afterRemove = app.get(testKey);
+                
+                const passed = beforeRemove === testValue && afterRemove === undefined;
+                logTestResult('app-remove-result', passed,
+                    passed ? 'app.remove() works correctly' : 'app.remove() failed to remove value',
+                    `Before: ${beforeRemove}, After: ${afterRemove}`
+                );
+            } catch (error) {
+                logTestResult('app-remove-result', false, 'app.remove() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // DOM SELECTION FUNCTIONS TESTS
+        // ========================================
+        
+        function testSelect() {
+            try {
+                const { select } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                
+                const result1 = select('#test-div');
+                const result2 = select('non-existent-element');
+                
+                const passed = result1 === testDiv && result2 === null;
+                logTestResult('select-result', passed,
+                    passed ? 'select() works correctly' : 'select() failed to select element',
+                    `Found: ${result1?.id}, Not found: ${result2}`
+                );
+            } catch (error) {
+                logTestResult('select-result', false, 'select() threw error: ' + error.message);
+            }
+        }
+        
+        function testSelectAll() {
+            try {
+                const { select } = __CPLIB__;
+                
+                const result = select('.test-element', true);
+                const expectedCount = document.querySelectorAll('.test-element').length;
+                
+                const passed = Array.isArray(result) && result.length === expectedCount;
+                logTestResult('select-all-result', passed,
+                    passed ? 'select() with all=true works correctly' : 'select() with all=true failed',
+                    `Found: ${result.length}, Expected: ${expectedCount}`
+                );
+            } catch (error) {
+                logTestResult('select-all-result', false, 'select() with all=true threw error: ' + error.message);
+            }
+        }
+        
+        function testSelectByContent() {
+            try {
+                const { selectByContent } = __CPLIB__;
+                
+                const result = selectByContent('div', 'Test Div', true);
+                
+                const passed = Array.isArray(result) && result.length > 0;
+                logTestResult('select-by-content-result', passed,
+                    passed ? 'selectByContent() works correctly' : 'selectByContent() failed to find elements',
+                    `Found: ${result.length} elements with "Test Div" content`
+                );
+            } catch (error) {
+                logTestResult('select-by-content-result', false, 'selectByContent() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // ELEMENT MANIPULATION FUNCTIONS TESTS
+        // ========================================
+        
+        function testAddClass() {
+            try {
+                const { addClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-class-' + Date.now();
+                
+                addClass(testDiv, testClass);
+                const hasClass = testDiv.classList.contains(testClass);
+                
+                const passed = hasClass;
+                logTestResult('add-class-result', passed,
+                    passed ? 'addClass() works correctly' : 'addClass() failed to add class',
+                    `Class added: ${testClass}, Has class: ${hasClass}`
+                );
+            } catch (error) {
+                logTestResult('add-class-result', false, 'addClass() threw error: ' + error.message);
+            }
+        }
+        
+        function testRemoveClass() {
+            try {
+                const { removeClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-remove-class-' + Date.now();
+                
+                testDiv.classList.add(testClass);
+                removeClass(testDiv, testClass);
+                const hasClass = testDiv.classList.contains(testClass);
+                
+                const passed = !hasClass;
+                logTestResult('remove-class-result', passed,
+                    passed ? 'removeClass() works correctly' : 'removeClass() failed to remove class',
+                    `Class removed: ${testClass}, Has class: ${hasClass}`
+                );
+            } catch (error) {
+                logTestResult('remove-class-result', false, 'removeClass() threw error: ' + error.message);
+            }
+        }
+        
+        function testHasClass() {
+            try {
+                const { hasClass } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                const testClass = 'test-has-class-' + Date.now();
+                
+                testDiv.classList.add(testClass);
+                const hasClassResult = hasClass(testDiv, testClass);
+                const hasNonExistentClass = hasClass(testDiv, 'non-existent-class');
+                
+                const passed = hasClassResult && !hasNonExistentClass;
+                logTestResult('has-class-result', passed,
+                    passed ? 'hasClass() works correctly' : 'hasClass() failed to check class',
+                    `Has class: ${hasClassResult}, Has non-existent: ${hasNonExistentClass}`
+                );
+            } catch (error) {
+                logTestResult('has-class-result', false, 'hasClass() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // EVENT SYSTEM FUNCTIONS TESTS
+        // ========================================
+        
+        function testOn() {
+            try {
+                const { _on } = __CPLIB__;
+                const testButton = document.getElementById('test-button');
+                let eventFired = false;
+                
+                const handler = () => { eventFired = true; };
+                testButton._on('click', handler);
+                
+                // Simulate click
+                testButton.click();
+                
+                const passed = eventFired;
+                logTestResult('on-result', passed,
+                    passed ? '_on() works correctly' : '_on() failed to attach event listener',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('on-result', false, '_on() threw error: ' + error.message);
+            }
+        }
+        
+        function testRemoveOn() {
+            try {
+                const { _on, _removeOn } = __CPLIB__;
+                const testButton = document.getElementById('test-button');
+                let eventFired = false;
+                
+                const handler = () => { eventFired = true; };
+                testButton._on('click', handler);
+                testButton._removeOn('click', handler);
+                
+                // Simulate click
+                testButton.click();
+                
+                const passed = !eventFired;
+                logTestResult('remove-on-result', passed,
+                    passed ? '_removeOn() works correctly' : '_removeOn() failed to remove event listener',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('remove-on-result', false, '_removeOn() threw error: ' + error.message);
+            }
+        }
+        
+        function testDispatchEvent() {
+            try {
+                const { dispatchEvent } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let eventFired = false;
+                
+                testDiv.addEventListener('custom-test', () => { eventFired = true; });
+                dispatchEvent(testDiv, 'custom-test');
+                
+                const passed = eventFired;
+                logTestResult('dispatch-event-result', passed,
+                    passed ? 'dispatchEvent() works correctly' : 'dispatchEvent() failed to dispatch event',
+                    `Event fired: ${eventFired}`
+                );
+            } catch (error) {
+                logTestResult('dispatch-event-result', false, 'dispatchEvent() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // OBSERVER FUNCTIONS TESTS
+        // ========================================
+        
+        function testObserveMutation() {
+            try {
+                const { observeMutation } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let mutationObserved = false;
+                
+                const observer = observeMutation(testDiv, { attributes: true }, () => {
+                    mutationObserved = true;
+                });
+                
+                // Trigger mutation
+                testDiv.setAttribute('data-test', 'value');
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = mutationObserved;
+                    logTestResult('observe-mutation-result', passed,
+                        passed ? 'observeMutation() works correctly' : 'observeMutation() failed to observe mutations',
+                        `Mutation observed: ${mutationObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-mutation-result', false, 'observeMutation() threw error: ' + error.message);
+            }
+        }
+        
+        function testObserveAttributes() {
+            try {
+                const { observeAttributes } = __CPLIB__;
+                const testDiv = document.getElementById('test-div');
+                let attributeObserved = false;
+                
+                const observer = observeAttributes(testDiv, () => {
+                    attributeObserved = true;
+                });
+                
+                // Trigger attribute change
+                testDiv.setAttribute('data-test-attr', 'value');
+                
+                // Wait a bit for observer to fire
+                setTimeout(() => {
+                    const passed = attributeObserved;
+                    logTestResult('observe-attributes-result', passed,
+                        passed ? 'observeAttributes() works correctly' : 'observeAttributes() failed to observe attributes',
+                        `Attribute observed: ${attributeObserved}`
+                    );
+                    if (observer && observer.disconnect) observer.disconnect();
+                }, 100);
+            } catch (error) {
+                logTestResult('observe-attributes-result', false, 'observeAttributes() threw error: ' + error.message);
+            }
+        }
+        
+        // ========================================
+        // UTILITY FUNCTIONS TESTS
+        // ========================================
+        
+        function testGenerateID() {
+            try {
+                const { generateID } = __CPLIB__;
+                
+                const id1 = generateID();
+                const id2 = generateID();
+                
+                const passed = typeof id1 === 'string' && id1.length > 0 && id1 !== id2;
+                logTestResult('generate-id-result', passed,
+                    passed ? 'generateID() works correctly' : 'generateID() failed to generate unique IDs',
+                    `ID1: ${id1}, ID2: ${id2}`
+                );
+            } catch (error) {
+                logTestResult('generate-id-result', false, 'generateID() threw error: ' + error.message);
+            }
+        }
+        
+        function testCreate() {
+            try {
+                const { create } = __CPLIB__;
+                
+                const element = create('div', { id: 'test-create-' + Date.now() }, { textContent: 'Test Create' });
+                
+                const passed = element && element.tagName === 'DIV' && element.textContent === 'Test Create';
+                logTestResult('create-result', passed,
+                    passed ? 'create() works correctly' : 'create() failed to create element',
+                    `Element: ${element?.tagName}, Text: ${element?.textContent}`
+                );
+            } catch (error) {
+                logTestResult('create-result', false, 'create() threw error: ' + error.message);
+            }
+        }
+        
+        function testRunFetch() {
+            try {
+                const { runFetch } = __CPLIB__;
+                
+                // Test with a simple endpoint (this will likely fail in test environment)
+                runFetch('https://httpbin.org/get')
+                    .then(result => {
+                        const passed = result && result.status === 'success';
+                        logTestResult('run-fetch-result', passed,
+                            passed ? 'runFetch() works correctly' : 'runFetch() failed to make request',
+                            `Status: ${result?.status}`
+                        );
+                    })
+                    .catch(error => {
+                        logTestResult('run-fetch-result', false, 'runFetch() threw error: ' + error.message);
+                    });
+            } catch (error) {
+                logTestResult('run-fetch-result', false, 'runFetch() threw error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

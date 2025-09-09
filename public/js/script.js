@@ -354,11 +354,11 @@
             iMaxSplit: parseInt(configOptions.gridSize),
             iCurrentSplit: parseInt(configOptions.gridSize),
             szBasePath: "/jsplugin",
-            oStyle: {
+            /* oStyle: {
                 border: "#343434",
                 borderSelect: "red",
                 background: "#4C4B4B"
-            }
+            } */
         });
 
         const gridContainer = jsPluginContainer.firstElementChild;
@@ -1247,8 +1247,6 @@
         const docFSE = ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'];
         const fsFnc = elcFS.filter(f => gridContainer?.[f])?.[0];
         const isFullscreen = docFSE.some(f => document?.[f]);
-
-        console.log(gridContainer);
 
         if (! isFullscreen && fsFnc) { gridContainer[fsFnc](); }
     });

@@ -1,6 +1,5 @@
 # Node
 node_modules/
-.npm/
 
 # Logs
 logs
@@ -31,13 +30,15 @@ out/
 .parcel-cache/
 .esbuild/
 jest-cache/
-jest/
 .rpt2_cache/
 *.tsbuildinfo
 
 # Environment variables
 .env
-.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
 
 # OS files
@@ -45,7 +46,9 @@ jest/
 Thumbs.db
 
 # IDE/editor
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.code-workspace
 .history/
@@ -66,6 +69,6 @@ ssl/
 *.pfx
 *.p12
 
-# Captures
-public/img/captures/
-*.jpg
+# Captures (solo imágenes en esta carpeta)
+public/img/captures/*.jpeg
+public/img/captures/*.jpg

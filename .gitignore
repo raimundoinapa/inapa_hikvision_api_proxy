@@ -68,3 +68,4 @@ ssl/
 
 # Captures
 public/img/captures/
+*.jpg

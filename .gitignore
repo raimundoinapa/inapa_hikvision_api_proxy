@@ -69,6 +69,5 @@ ssl/
 *.pfx
 *.p12
 
-# Captures (solo imágenes en esta carpeta)
-public/img/captures/*.jpeg
-public/img/captures/*.jpg
+# Captures
+public/img/captures/*

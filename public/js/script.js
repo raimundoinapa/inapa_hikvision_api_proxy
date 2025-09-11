@@ -216,6 +216,8 @@
 
     const filterData = async () => {
         dataObj.filtered = await dbRequest._getAll('cameras');
+
+        dataObj.filtered.sort((a, b) => Number(a.cameraIndexCode) - Number(b.cameraIndexCode));
         
         const words = ! configOptions.searchKeywords.trim().length ? [] : configOptions.searchKeywords.split(',').map(m => m.trim().toLowerCase());
 
@@ -1224,7 +1226,8 @@
 
             //Si hay promesas por cumplir y estas suman una fila del grid o es la última fila del grid, esperamos las promesas
             if (playersPromises.length && (! (i % configOptions.gridSize) || i == playerEntries.length - 1)) {
-                const result = await Promise.all(playersPromises);
+                //Vamos a comentar esta línea para comparar entre el inicio de todos los streams y el inicio de todos los streams con la nueva estrategia
+                //await Promise.all(playersPromises);
 
                 playersPromises = [];
             }

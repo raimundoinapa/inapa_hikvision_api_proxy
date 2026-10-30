@@ -632,6 +632,7 @@
 
                                     elem.$el.input.focus();
                                     elem.$el.input.value = '';
+                                    elem.$el.input._event('input');
 
                                     hideError(elem.$el.input);
 
@@ -643,7 +644,10 @@
                         }
 
                         if ('password' == e?.type?.toLowerCase() || 'password' == e?.dataset?.type) {
-                            if (! e.pattern) { e.pattern = "^(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[#?!@$%^&*.,;:`'_-~+=<>\\\\\[\\]\(\\)\\{\\}\\|\\/]).{8,32}$"; }
+                            if (! e.pattern) {
+                                e.pattern = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&'`*.,;:_~+=<>?\\-\\[\\]\\|\\(\\)\\{\\}\\/\\\\\"]).{8,32}$";
+                                //Se convierte en: ^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&'`*.,;:_~+=<>?\-\[\]\|\(\)\{\}\/\\&quot;]).{8,32}$
+                            }
 
                             if (! e._revealPasswordButton && e?.dataset?.reveal) {
                                 e.dataset.type = 'password';
@@ -681,9 +685,24 @@
                         e._on('focus', (evt) => {
                             const elem = evt.currentTarget;
 
-                            if (elem.value) {
-                                if (elem.$el.clearButton) { elem.parentNode.appendChild(elem.$el.clearButton); }
-                                if (elem.$el._revealPasswordButton) { elem.parentNode.appendChild(elem.$el._revealPasswordButton); }
+                            if (elem.$el.clearButton) {
+                                elem.$el.clearButton.toggleAttribute('disabled', false);
+                                elem.$el.clearButton.toggleAttribute('aria-disabled', false);
+                                elem.$el.clearButton.toggleAttribute('readonly', false);
+
+                                if (elem.value) {
+                                    elem.parentNode.appendChild(elem.$el.clearButton);
+                                }  
+                            }
+
+                            if (elem.$el._revealPasswordButton) {
+                                elem.$el._revealPasswordButton.toggleAttribute('disabled', false);
+                                elem.$el._revealPasswordButton.toggleAttribute('aria-disabled', false);
+                                elem.$el._revealPasswordButton.toggleAttribute('readonly', false);
+
+                                if (elem.value) {
+                                    elem.parentNode.appendChild(elem.$el._revealPasswordButton);
+                                }
                             }
                         });
 
@@ -735,7 +754,6 @@
 
                     if (frm._onBeforeSubmit) { frm._onBeforeSubmit(frm); }
 
-                    let elems = frm.elements;
                     let isMultipartFormData = false;
                     let formError = false;
 
@@ -749,7 +767,7 @@
                         * Si el usuario visializa el password y olvida ocultarlo, le cambiamos el tipo para que la validación
                         * se haga correctamente (Aunque creo que no afecta y adicionalmente debería usar un patrón para la validación)
                         */
-                        if (e?.dataset?.type && 'pasword' == e?.dataset?.type) { e.type = 'password'; }
+                        if ('password' == e?.dataset?.type) { e.type = 'password'; }
 
                         if (! isValid(e, true)) {
                             showError(e);

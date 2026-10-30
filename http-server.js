@@ -6,15 +6,19 @@
 //https://www.restapitutorial.com/lessons/httpmethods.html#:~:text=The%20primary%20or%20most%2Dcommonly,but%20are%20utilized%20less%20frequently.
 
 class httpServer {
-    constructor(options = {protocol: '', ip: '', port: '', root: ''}) {
-        const http = require('http');
+    constructor(options = {protocol: 'https', ip: '', port: '', root: ''}) {
         const fs = require('fs');
         const path = require('path');
-        
-        this.protocol = options.protocol || 'http';
+        const certPath = path.join(__dirname, 'ssl');
+        const keyFile = process.env?.SSL_KEY || options?.key || path.join(certPath, 'server.key');
+        const certFile = process.env?.SSL_CERT || options?.cert || path.join(certPath, 'server.crt');
+        const certsExist = fs.existsSync(keyFile) && fs.existsSync(certFile);
+        const protocol = options?.protocol || (! certsExist ? 'http' : 'https');
+        const http = require(protocol);
+
         this.ip = options.ip || '127.0.0.1';
         this.port = options.port || 8080;
-        this.host = `${this.protocol}://${this.ip}:${this.port}/`;
+        this.host = `${protocol}://${this.ip}:${this.port}/`;
         this.public = options.public || path.normalize(path.resolve(__dirname, 'public'));
         this.mimeTypes = {
             text: 'text/plain',
@@ -46,17 +50,18 @@ class httpServer {
             wasm: 'application/wasm',
             octetStream: 'application/octet-stream',//Para cualquier tipo de archivo binario
         };
-        this.RESTful = ['get', 'post', 'put', 'patch', 'delete', 'options'];
+        this.RESTfulVerbs = ['get', 'post', 'put', 'patch', 'delete', 'options'];
         this.maxPostSize = process.env.MAX_POST_SIZE || 10 * 1024 * 1024;//10MB
         this.sockets = [];
         this.middlewares = [];
-
+        this.notFoundEndpoint = false;
         //this.getEndpoints = {}
         //this.get = (endpoint = '', fnc = () => {}) => {
             //this.getEndpoints[endpoint] = fnc;
         //}
-        for (let r = 0; r < this.RESTful.length; r++) {
-            const verb = this.RESTful[r];
+
+        for (let r = 0; r < this.RESTfulVerbs.length; r++) {
+            const verb = this.RESTfulVerbs[r];
 
             this[`${verb}Endpoints`] = {};
 
@@ -68,6 +73,24 @@ class httpServer {
         this.use = (middleware) => {
             this.middlewares.push(middleware);
         };
+
+        this.getClientIP = (req) => {
+            //Cabacera reenviadas (para escenarios de proxy o balanceador de carga)
+            const forwarded = req.headers['x-forwarded-for'];
+            
+            if (forwarded) {
+                return forwarded.split(',')[0].trim();
+            }
+            
+            const realIP = req.headers['x-real-ip'];
+            
+            if (realIP) { return realIP; }
+        
+            //Fallback a remoteAddress
+            const reqConn = req?.connection;
+
+            return reqConn?.remoteAddress || req?.socket?.remoteAddress || reqConn?.socket?.remoteAddress || 'unknown';
+        }
 
         this.getQueryStringEntries = (qs) => {
             const entries = {};
@@ -102,11 +125,11 @@ class httpServer {
                 req.on("end", () => {
                     const data = Buffer.concat(chunks);//Creamos un Buffer con todos los trozos de información (lo mismo que Buffer.from(chunks.join("")))
 
-                    if (req._isFileUpload) {
-                        const boundaryMatch = req._contentType.match(/boundary=(.+)$/);
+                    if (req._isMultipart) {
+                        const dataToInspect = data.toString('utf8').slice(0, 300);
+                        const boundaryMatch = dataToInspect.match(/boundary=(.+)$/);
                         
                         if (! boundaryMatch) {
-                            //Aquí req._contentType es un application/octet-stream o algo como image/jpeg, etc. con x-file-name, x-file-size, etc.
                             //fs.writeFileSync(filepath, data);
                         } else {
                             //Lógica de bounderies para multipart/form-data
@@ -119,15 +142,18 @@ class httpServer {
                         return resolve(data);
                     }
     
-                    const bufferString = data.toString();//Convertimos el buffer en una cadena parecida al querystring en una URL
-    
-                    //const parsedData = new URLSearchParams(bufferString);//Convertimos el querystring en un objeto para iterarlo
-    
-                    //for (let pair of parsedData.entries()) { dataObj[pair[0]] = pair[1]; }
-    
-                    //if (dataObj) { resolve(dataObj); }
+                    const bufferString = data.toString('utf8');//Convertimos el buffer en una cadena parecida al querystring en una URL
 
                     if (bufferString) {
+                        if (req._contentType && req._contentType.indexOf('x-www-form') + 1) {
+                            const parsedData = new URLSearchParams(bufferString);//Convertimos el querystring en un objeto para iterarlo
+            
+                            for (let pair of parsedData.entries()) { dataObj[pair[0]] = pair[1]; }
+            
+                            return resolve(dataObj); 
+                        }
+
+                        //Intentamos convertir el resultado en un objeto json
                         try {
                             const result = JSON.parse(bufferString);
 
@@ -144,11 +170,12 @@ class httpServer {
             });
         }
 
-        this.server = http.createServer(async (req, res) => {
+        this.requestHaldler = async (req, res) => {
             let middlewareIndex = 0;
 
+            req._clientIP = this.getClientIP(req);
             req._method = req.method.toLowerCase();
-            req._url = ! /\/$/.test(req.url) ? req.url.split('?')?.[0] : req.url + 'index.html';//Si el request termina en / asumimos que es un index.html
+            req._url = ! /\/$/.test(req.url) ? req.url.split('?')[0] : req.url + 'index.html';//Si el request termina en / asumimos que es un index.html
             req._qs = req.url.split('?')?.[1] || '';
             req._qsEntries = this.getQueryStringEntries(req._qs);
             req._isPost = 'get' != req._method;
@@ -158,93 +185,32 @@ class httpServer {
             req._extension = req._fileName && /\./.test(req._fileName) ? path.extname(req._fileName).slice(1) : '';//Le quita el punto a la extensión
             req._fileType = this.mimeTypes?.[req._extension] || this.mimeTypes?.[Object.keys(this.mimeTypes)[Object.values(this.mimeTypes).indexOf(req.headers['content-type'])]] || this.mimeTypes.octetStream;
             req._contentType = req.headers['content-type'] || '';
-            req._isFileUpload = req._contentType.startsWith('multipart/form-data') || req._contentType.includes(this.mimeTypes.octetStream) || req.headers['x-file-name'] || req.headers['x-file-size'] || req.headers['x-chunk-index'];
+            req._isMultipart = req._contentType.startsWith('multipart/form-data') || req._contentType.includes(this.mimeTypes.octetStream) || req.headers['x-file-name'] || req.headers['x-file-size'] || req.headers['x-chunk-index'];
             req._contentLength = parseInt(req.headers['content-length'] || '0');
             req._dataBody = ! req._isPost ? req._qsEntries : await this.getPostBody(req);
 
-            //console.log(req._method, req.url, req._qs, req._qsEntries, req._isPost, req._isBackendRequest, req._filePath, req._fileName, req._extension, req._fileType, req._contentType, req._isFileUpload, req._contentLength, req._dataBody);
+            //console.log(req._method, req.url, req._qs, req._qsEntries, req._isPost, req._isBackendRequest, req._filePath, req._fileName, req._extension, req._fileType, req._contentType, req._isMultipart, req._contentLength, req._dataBody);
 
-            /*
-            //Ejemplo de formulario para subir un archivo
+            req.on('error', (err) => {
+                console.error('Request error:', err?.code, err?.message, err?.syscall, err?.hostname);
 
-            <form action="/upload" method="post" enctype="multipart/form-data" target="formResult">
-                <input type="file" name="file" id="file">
-                <input type="text" name="description" id="description">
-                <button type="submit">Upload</button>
-            </form>
+                //A veces SSE genera un error, pero ya ha mandado cabeceras
+                if (! res.headersSent) {
+                    req.destroy();
 
-            <script>
-                document.getElementById('file').addEventListener('change', async (e) => {
-                    const file = e.target.files[0];
-
-                    if (! file) { return; }
-
-                    const formData = new FormData();
-                
-                    formData.append('file', file);
-                    formData.append('description', 'Description of the file');
-
-                    //Enviando el formData con fetch
-                    try {
-                        const response = await fetch('/upload', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        //
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                    }
-
-                    //Enviando el formData con XMLHttpRequest
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/upload', true);
-                    xhr.upload.onprogress = function(e) {
-                        if (e.lengthComputable) {
-                            const percentComplete = Math.round((e.loaded / e.total) * 100);
-                        }
-                    };
-                    xhr.onload = function() {};
-                    xhr.onerror = function() {};
-                    xhr.send(formData);
-
-                    //Enviando el file con fetcha row
-                    try {
-                        const response = await fetch('/upload', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': file.type,
-                                'X-File-Name': file.name,
-                                'X-File-Size': file.size.toString()
-                            },
-                            body: file
-                        });
-
-                        //
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                    }
-                });
-            </script>
-            */
-
-            req.on('error', (error) => {
-                console.error('Request error:', error);
-
-                req.destroy();
-
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    status: 'fail',
-                    message: 'Request error'
-                }));
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        status: 'fail',
+                        message: 'Request error'
+                    }));
+                }
 
                 return;
             });
 
             if ('options' == req._method) {
                 res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', this.RESTful.join(', ').toUpperCase());
+                res.setHeader('Access-Control-Allow-Methods', this.RESTfulVerbs.join(', ').toUpperCase());
                 res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-File-Name, X-File-Size, X-Chunk-Index, X-Total-Chunks');
                 res.writeHead(200);//Enviamos HTTP 200 para el preflight
                 res.end();
@@ -270,14 +236,14 @@ class httpServer {
                 if (middlewareIndex < this.middlewares.length) {
                     this.middlewares[middlewareIndex++](req, res, next);
                 } else {
-                    if (this.respond) {
+                    if (this?.respond) {
                         this.respond(req, res);//Extender la clase añadiendo funcionalidad a este método
         
                         return;
                     }
                     
-                    for (let r = 0; r < this.RESTful.length; r++) {
-                        const verb = this.RESTful[r];
+                    for (let r = 0; r < this.RESTfulVerbs.length; r++) {
+                        const verb = this.RESTfulVerbs[r];
                         const endpoint = this?.[`${verb}Endpoints`]?.[req._url];
 
                         if (verb == req._method && endpoint) {
@@ -288,14 +254,20 @@ class httpServer {
                             return;
                         }
                     }
-                
+
                     fs.readFile(req._filePath, (err, data) => {
                         //console.log(req._filePath);
                         
                         if (err) {
+                            if (this?.notFoundEndpoint) {
+                                this.notFoundEndpoint(req, res);
+
+                                return;
+                            }
+                            
                             res.writeHead(404, {'Content-Type': 'text/html'});
                             res.end('404: File not found');
-                
+
                             return;
                         }
                 
@@ -308,29 +280,48 @@ class httpServer {
             };
 
             next();
-        });
+        };
 
-        this.quit = () => {
+        this.server = ! certsExist ? http.createServer(this.requestHaldler) : http.createServer({
+            key: fs.readFileSync(keyFile),
+            cert: fs.readFileSync(certFile),
+        }, this.requestHaldler);
+
+        this.quit = async () => {
             console.log(`Closing http server`);
 
-            return new Promise((resolve) => {
-                this.server.close(() => {
-                    for (const s of this.sockets) {
-                        s.destroy();
-                    }
-    
-                    this.sockets = [];
-    
-                    console.log(`http server closed`);
+            //Para realizar algun tipo de operación antes de apagar el server
+            if (this.onExit) { await this.onExit(); }
+			
+			this.server.close((err) => {
+				if (err) {
+					console.error('Server close error:', err);
+					
+					process.exit(1);//Si hay error intentamos cerrar el server forzadamente
+				}
+				
+				for (const s of this.sockets) {
+					s.destroy();
+				}
 
-                    resolve(true);
-                });
-            });
+				this.sockets = [];
+
+				console.log(`http server closed`);
+				
+				process.exit(0);
+			});
+			
+			//Forzamos el cierre de process en 5 segundos, si ya esta cerrado, Node ignora este comando
+			setTimeout(() => process.exit(1), 5000).unref();
         }
         
         this.run = () => {
+            if (this?.getEndpoints?.['/404']) {
+                this.notFoundEndpoint = this.getEndpoints['/404'];
+            }
+            
             this.server.listen(this.port, () => {
-                console.log(`HTTP server is listening on ${this.host}`);
+                console.log(`🚀 HTTP server is listening on ${this.host}`);
 
                 this.server.on('connection', (s) => {
                     this.sockets.push(s);
@@ -339,18 +330,11 @@ class httpServer {
                 });
             });
 
-            // Graceful shutdown
-            process.on('SIGTERM', async () => {
-                await this.quit();
-
-                process.exit(0);
-            });
-
-            process.on('SIGINT', async () => {
-                await this.quit();
-
-                process.exit(0);
-            });
+            //Shutdown con Ctrl+C ó Ctrl+\
+            process.on('SIGINT', async () => { this.quit(); });
+            
+            //Shutdown con Ctrl+C
+            process.on('SIGTERM', async () => { this.quit(); });
         }
     }
 }

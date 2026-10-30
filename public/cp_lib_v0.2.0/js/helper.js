@@ -1372,43 +1372,64 @@
     //Url de archivo, source de archivo, file de input file
     const loadFileContent = (file = '' || {}, mode = 'application/json', abortTime = false) => {
         return new Promise(async (resolve, reject) => {
-            if ('string' == typeof file) {
-                const params = {
-                    cache: 'reload',
-                    headers: {
-                        'content-type': 'application/json'	
-                    },
-                    timeout: 60000
-                };
-        
-                if (mode) { params.headers['content-type'] = mode; }
-        
-                if (abortTime) { params.timeout = abortTime; }
-    
-                const result = await runFetch(file, params);
-
-                return resolve(result);
-            }
-
-            const modeKeywords = {
+            const fetchModes = {
+                json: ['json'],
+                text: ['text', 'html', 'css', 'javascript', 'xml'],
+                formData: ['multipart', 'form'],
+                blob: ['octet', 'image', 'audio', 'video', 'pdf', 'blob'],
+                arrayBuffer: ['buffer']
+            };
+            const fileModes = {
                 readAsText: ['json', 'text', 'html', 'css', 'javascript', 'xml'],
                 readAsDataURL: ['image', 'dataurl', 'base64'],
                 readAsBinaryString: ['octet', 'audio', 'video', 'pdf', 'blob'],
                 readAsArrayBuffer: ['buffer'],
             };
-            const contentType = Object.keys(modeKeywords).find((k) => 
-                modeKeywords[k].some((w) => 
+            const fetchContentType = Object.keys(fetchModes).find((k) => 
+                fetchModes[k].some((w) => 
                     mode.toLowerCase().includes(w.toLowerCase())
                 )
-            ) || 'readAsText';
+            );
+            const fileContentType = Object.keys(fileModes).find((k) => 
+                fileModes[k].some((w) => 
+                    mode.toLowerCase().includes(w.toLowerCase())
+                )
+            );
+
+            if ('string' == typeof file) {
+                const params = {
+                    cache: 'reload',
+                    headers: {
+                        'content-type': fetchContentType || 'blob'
+                    },
+                    timeout: 60000
+                };
+        
+                if (abortTime) { params.timeout = abortTime; }
+    
+                const result = await runFetch(file, params);
+
+                if (! result.ok || ! fileContentType || 'readAsDataURL' != fileContentType) {
+                    return resolve(result);
+                }
+
+                file = result?.data || '';
+            }
+            
             const reader = new FileReader();
 
-            reader[contentType](file);
-            reader.onload = (e) => { return resolve(e.target.result); }
+            reader[fileContentType](file);
+            reader.onload = (e) => {
+                return resolve({
+                    ok: true,
+                    status: 'success',
+                    data: e.target.result
+                });
+            }
             reader.onerror = (err) => {
                 console.error('Error: ', err);
 
-                return reject(err);
+                return reject({ok: false, status: 'fail', message: err});
             }
         });
     }

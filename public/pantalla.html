@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="title" content="INAPA - Sistema de Monitoreo">
+    <meta name="description" content="INAPA - Sistema de Monitoreo">
+    <meta name="keywords" content="INAPA - Sistema de Monitoreo">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Spanish">
+    <meta name="author" content="Raimundo Araujo Correa">
+    
+    <!-- Vendor Files -->
+        <!-- CPLIb -->
+        <link href="./cp_lib_v0.2.0/css/helper.css" rel="stylesheet">
+        <script src="./cp_lib_v0.2.0/js/helper.js"></script>
+        <script src="./cp_lib_v0.2.0/js/custom-elements.js"></script>
+        <script src="./cp_lib_v0.2.0/js/web-components.js"></script>
+    
+    <!-- JSPlugin Support -->
+        <script src="./jsplugin/jsPlugin-3.0.0.min.js"></script>
+
+    <!-- <style>
+        #camera {
+            height: 100%;
+        }
+    </style> -->
+
+    <title>Pantalla 1</title>
+</head>
+<body>
+    <main>
+        <!-- <br>
+        <div class="p-absolute w100"><h1 class="h5">Pantalla 1</h1></div>
+        <br> -->
+        <div id="camera" class="d-flex-center">
+            <div id="jsPluginGridContainer"></div>
+        </div>
+    </main>
+</body>
+<script>
+    (async () => {
+        const {app, q, select, create, sleep, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
+
+        let screenNum = window.location.href.split('pantalla')?.[1] || 1;
+        let currenStream = '';
+
+        if (! /^[1-4]$/.test(screenNum)) { screenNum = 1; }
+
+        document.title = `Pantalla ${screenNum}`;
+        //q('h1').innerText = `Pantalla ${screenNum}`;
+
+        const showSnackbar = function(msg = '', severity = 'info', duration = '') {
+            const sb = create('a-dialog', {
+                snackbar: duration, 'snackbar-progress' : '', 'self-destroy': '', bottom: '', right: '', transition: 'swipe-up', state: 'active'
+            }, {innerHTML: msg});
+
+            const attr = {};
+            attr[severity] = '';
+
+            sb.setAttr = attr;
+            
+            document.body.appendChild(sb);
+        }
+
+        const addDblTapListener = (element, dblTapFnc) => {
+            let lastTap = 0;
+            const doubleTapDelay = 300;//ms
+
+            element.addEventListener('touchstart', function(e) {
+                const currentTime = new Date().getTime();
+                const tapGap = currentTime - lastTap;
+
+                if (tapGap < doubleTapDelay && tapGap > 0) {
+                    e.preventDefault();//Evita que haga zoom
+                    
+                    dblTapFnc(e);
+                }
+
+                lastTap = currentTime;
+            });
+        }
+
+        const isFullscreen = () => {
+            return ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'].some(f => document?.[f]);
+        }
+
+        const exitFullscreenFnc = () => {
+            const efsFnc = ['exitFullscreen', 'webkitExitFullscreen', 'mozExitFullscreen', 'msExitFullscreen'].filter(f => document?.[f])?.[0];
+
+            if (document?.[efsFnc]) { document[efsFnc](); }
+            
+            return true;
+        }
+
+        const enterFullscreen = (evt) => {
+            const elemFullscreenProp = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'].filter(f => evt.target?.[f])?.[0];
+
+            if (! isFullscreen()) {
+                if (elemFullscreenProp) {
+                    evt.target[elemFullscreenProp]();
+                }
+            } else {
+                exitFullscreenFnc();
+            }
+        }
+
+        const getScreenSize = () => {
+            const div = create('div', false, {style: {position: 'absolute', visibility: 'hidden', overflow: 'scroll', width: '100%'}});
+
+            document.body.appendChild(div);
+        
+            const width = div.clientWidth;
+            const height = Math.floor((width) / (16/9));
+            
+            div._remove();
+
+            return {width, height};
+        };
+
+        const screenSize = getScreenSize();
+
+        const jsDecoder = await new JSPlugin({
+            szId: 'jsPluginGridContainer',
+            iWidth: screenSize.width,
+            iHeight: screenSize.height,
+            iMaxSplit: 1,
+            iCurrentSplit: 1,
+            szBasePath: "/jsplugin",
+            /* oStyle: {
+                border: "#343434",
+                borderSelect: "red",
+                background: "#4C4B4B"
+            } */
+        });
+        const jsDecoderFullscreen = () => {
+            jsDecoder.JS_FullScreenDisplay(true).then(function () {
+                console.log("JS_FullScreenDisplay success");
+            }, function () {
+                console.log("JS_FullScreenDisplay failed");
+            });
+        }
+        const videoPlayerContainer = select('[id^="jsPluginGridContainerplayer-container"]') || {};
+        const jqObj = Object.keys(videoPlayerContainer)?.[0];
+
+        if (jqObj) {
+            console.log(jqObj, videoPlayerContainer[jqObj]);
+
+            delete videoPlayerContainer[jqObj];
+
+            //videoPlayerContainer._on('dblclick', enterFullscreen);
+            //addDblTapListener(videoPlayerContainer, enterFullscreen);
+
+            videoPlayerContainer._on('dblclick', jsDecoderFullscreen);
+            addDblTapListener(videoPlayerContainer, jsDecoderFullscreen);
+        }
+
+        const eventSource = new EventSource(`/connect_client_alt?clientId=${screenNum}`);
+
+        eventSource.addEventListener("message", async (e) => {
+            let response = {};
+            
+            try {
+                response = JSON.parse(e.data);
+            } catch (err) {
+                console.log(err);
+            } finally {}
+
+            if (! Object.keys(response) || ! response?.event) { return; }
+
+            if ('error' == response.event && response?.data) {
+                console.log(response.data);
+                
+                return;
+            }
+            
+            if ('connect' == response.event && response?.data) {
+                showSnackbar('Cliente conectado satisfactoriamente', 'success');
+                
+                return;
+            }
+
+            if ('update' == response.event) {
+                jsDecoder.JS_Stop(0).then(function () {
+                    console.log("stop success");
+                }, function () {
+                    console.log("stop failed");
+                });
+
+                console.log(response);
+
+                if (! response?.data?.streamUrl) {
+                    return;
+                }
+
+                if (currenStream == response.data.streamUrl) {
+                    currenStream = '';
+                    
+                    return;
+                }
+
+                currenStream = response.data.streamUrl;
+
+                jsDecoder.JS_Play(currenStream, {
+                    playURL: currenStream,
+                    auth: '',
+                    mode: 'media',
+                    token: '',
+                }, 0).then(async () => {
+                    /*jsDecoder.JS_FullScreenSingle(0).then(function () {
+                        console.log("JS_FullScreenSingle success");
+                    }, function () {
+                        console.log("JS_FullScreenSingle failed");
+                    });*/
+
+                    showSnackbar(`Transmisión iniciada`, 'success');
+                }, () => {
+                    showSnackbar(`No se pudo inicar la transmisión de la cámara`, 'warning');
+                });
+            }
+        });
+
+        eventSource.addEventListener("error", (e) => {
+            console.log('Error de conexión - reconectando', e);
+        });
+
+        window.onresize = function () {
+            const screenSize = getScreenSize();
+
+            jsDecoder.JS_Resize(`${screenSize.width}`, `${screenSize.height}`).then(function () {
+                console.log("JS_Resize success");
+            }, function () {
+                console.log("JS_Resize failed");
+            });
+        }
+    })();
+</script>
+</html>

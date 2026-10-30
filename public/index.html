@@ -79,6 +79,8 @@
             .grid-2x2 { --grid-divisor: 2; }
             .grid-1x1 { --grid-divisor: 1; }
             #camera-grid {
+                position: relative;
+                overflow: hidden;
                 display: grid;
                 /*
                 Cálculo para el grid 4x4
@@ -87,12 +89,12 @@
                 */
                 grid-template-columns: repeat(auto-fit, minmax(calc((var(--max-width) - (var(--padding) * 2) - (var(--gap) * (var(--grid-divisor) - 1))) / var(--grid-divisor)), 1fr));
                 gap: var(--gap);
-                overflow: hidden;
             }
 
             [id^="jsPluginGridContainerplayer"] {
                 position: relative;
                 aspect-ratio: 16 / 9;
+                overflow: hidden;
                 color: var(--bg-color-3);
                 background-color: var(--bg-color-3);
                 background-repeat: no-repeat;
@@ -108,8 +110,9 @@
                 [id^="jsPluginGridContainerplayer"] img,
                 [id^="jsPluginGridContainerplayer"] canvas {
                     position: absolute;
-                    visibility: hidden;
                 }
+                [id^="jsPluginGridContainerplayer"] img { visibility: hidden; }
+                [id^="jsPluginGridContainerplayer"] canvas,
                 [id^="jsPluginGridContainerplayer"] video {
                     width: 100%;
                     height: 100%;
@@ -135,7 +138,7 @@
                 .refresh-btn-container {
                     position: absolute;
                     top: 10px;
-                    right: 2.5rem;
+                    left: 10px;
                     z-index: 1000;
                     opacity: 0;
                 }
@@ -162,7 +165,7 @@
 
                 .camera-name-container {
                     top: 0;
-                    left: 0;
+                    right: 0;
                     display: flex;
                     justify-content: flex-end;
                     z-index: 999;
@@ -233,21 +236,22 @@
                         <dark-mode-toggler icon-size="1.5em"></dark-mode-toggler>
                     </div>
                     <div>
-                        <a-badge success pill id='online-badge'>12 Online</a-badge> <a-badge danger pill id='offline-badge'>2 Offline</a-badge> <a-badge info pill id='total-badge'>12 Total</a-badge>
+                        <a-badge transparent id='client-id-badge'></a-badge> <a-badge success pill id='online-badge'>12 Online</a-badge> <a-badge danger pill id='offline-badge'>2 Offline</a-badge> <a-badge info pill id='total-badge'>12 Total</a-badge>
                     </div>
                 </div>
 
-                <form action="/test" method="post" id="tools-form" is="super-form" novalidate="" class="d-flex-center gap0-5 mt1">
+                <form action="#" method="post" id="tools-form" is="super-form" novalidate="" class="d-flex-center gap0-5 mt1">
                     <div class="d-flex-center gap0-5 mb1">
                         <div class="form-row mb0">
                             <div class="d-flex gap0-5">
                                 <div class="p-relative">
                                     <!-- Lupa -->
                                     <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>0 -->
-                                    <input type="text" name="search" placeholder="Buscar (Keywords separados por ,)" title="Buscar (Keywords separados por ,)" style="width: 280px;">
-                                    <label class="label-placeholder">Buscar (Keywords separados por ,)</label></div>
+                                    <input type="text" name="search" id="search" placeholder="Buscar (Keywords separados por ,)" title="Buscar (Keywords separados por ,)" style="width: 280px;">
+                                    <label class="label-placeholder" for="search">Buscar (Keywords separados por ,)</label></div>
                                 <div>
                                 <a-button info type="submit" name="search-button"><an-icon search size="1.2em"></an-icon></a-button></div>
+                                <div></div>
                             </div>
                         </div>
                         <!-- <div><a-button info><an-icon grid size="1.2em"></an-icon></a-button></div>
@@ -276,14 +280,18 @@
                     </div>
                     <div class="d-flex-center gap0-5 mb1">
                         <div class="form-row mb0">
-                            <select name="grid-size-select">
-                            </select>
+                            <select name="grid-size-select"></select>
                             <label class="label-placeholder">Tamaño</label>
                         </div>
                         <div><a-button id="btn-start-all" success aria-label="Iniciar todo">▶ <span class="d-none">Iniciar todo</span></a-button></div>
                         <div><a-button id="btn-stop-all" danger aria-label="Detener todo">⏹ <span class="d-none">Detener todo</span></a-button></div>
                         <div><a-button id="btn-fullscreen-all" warning aria-label="Fullscreen"><an-icon full-screen></an-icon></a-button></div>                        
                         <div><a-button id="btn-refresh-all" info aria-label="Refresh"><an-icon refresh size="1.2em"></an-icon></a-button></div>
+                        <div>
+                            <a-button id="btn-screen-share" aria-label="Share Screen" aria-controls="share-screen-dialog" info>
+                                <img src="./img/share_screen.png" alt="Share Screen" style="width: 16px;">
+                            </a-button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -296,6 +304,27 @@
                 <div id="pagination"></div>
             </div>
         </main>
+
+        <a-dialog id='login-dialog' class='protected-from-dark' close-onescape='false' close-onbackdropclick='false' close-onhwback='false'>
+            <form action="/auth/login" method="post" is="super-form" novalidate="">
+                <fieldset>
+                    <legend>Credenciales</legend>
+                    <div class="form-row">
+                        <input type="text" name="username" id="username" placeholder="Nombre de usuario" required>
+                        <label for="username" class="label-placeholder">Nombre de usuario</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="password" name="password" id="password" placeholder="Password" required>
+                        <label for="password" class="label-placeholder">Password</label>
+                    </div>
+                    <div class="form-row">
+                        <input type="hidden" name="jwt" value="true">
+                        <a-button type="submit" success class="w100">Iniciar sesión</a-button>
+                    </div>
+                    <div class="errorMsg"></div>
+                </fieldset>
+            </form>
+        </a-dialog>
 
         <a-dialog id="filters-dialog" menu class="protected-from-dark" transition='swipe-down' width="400px">
             <style>
@@ -357,6 +386,54 @@
                     </div>
                 </fieldset>
             </form>
+        </a-dialog>
+
+        <a-dialog id='share-screen-dialog' class='protected-from-dark' style="--background-filter: none;">
+            <div class="d-flex gap1" is="super-form">
+                <div class="form-row mb0">
+                    <select name="screen-select" data-bind="screen-select">
+                        <option value="" selected>Selecciona</option>
+                        <option value="00001">00001</option>
+                        <option value="00002">00002</option>
+                        <option value="00003">00003</option>
+                        <option value="00004">00004</option>
+                    </select>
+                    <label for="screen" class="label-placeholder">Pantalla</label>
+                </div>
+                <div class="form-row mb0">
+                    <select name="camera-select" data-bind="camera-select">
+                        <option value="" selected>Selecciona</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                    </select>
+                    <label for="camera" class="label-placeholder">Cámara</label>
+                </div>
+                <div class="form-row mb0">
+                    <select name="stream-select" data-bind="stream-select">
+                        <option value="" selected>Selecciona</option>
+                        <option value="subStream">Sub stream</option>
+                        <option value="mainStream">Main stream</option>
+                    </select>
+                    <label for="screen" class="label-placeholder">Pantalla</label>
+                </div>
+                <div class="form-row mb0">
+                    <a-button id="btn-share-screen" info data-bind="btn-share-screen">Ok</a-button>
+                </div>
+            </div>
         </a-dialog>
     </body>
     <script src="./js/script.js"></script>

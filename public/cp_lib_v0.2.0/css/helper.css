@@ -397,10 +397,9 @@ svg {
     justify-content: space-between;
     align-items: center;
     opacity: 0.8;
-    z-index: -1;
 }
     :where([is="super-form"]) :is(
-        :is(*:not(:placeholder-shown), *:focus, *:disabled) ~ label.label-placeholder,
+        :is(*:not(:placeholder-shown), *:focus, *:disabled, *:-webkit-autofill) ~ label.label-placeholder,
         form[disabled] label.label-placeholder,
         fieldset[disabled] label.label-placeholder,
         .label-placeholder.placeholder-shown

@@ -1756,7 +1756,8 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
         drawer="true" 
         position="bottom" 
         width="100%" 
-        style-url="./modal.css">
+        style-url="./modal.css" 
+        style="--background-filter: none;">
     </a-dialog>
 
     - El modal esta basado en el paradigma de estar sobre un fondo fixed, con el <body> sin scrollbar.
@@ -1845,6 +1846,7 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
     CSS
         Variables (var)
             --background-color
+            --background-filter
             --window-width
             --window-max-width
             --window-height
@@ -1912,6 +1914,7 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
                     --window-max-height: calc(100vh - 2rem);
                     --window-margin: 1rem;
                     --corner-gradient: linear-gradient(90deg, var(--background-color) 0%, var(--background-color) 40%, transparent 100%);
+                    --background-filter: blur(5px);
                     --body-padding-left: 1rem;
                     --body-padding-right: 1rem;
                     --header-min-height: 40px;
@@ -1955,7 +1958,7 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
                 .backdrop {
                     /* tiene aplicado true-fixed-pos directamente */
                     background-color: hsla(0, 0%, 0%, 0.7);
-                    backdrop-filter: blur(5px);
+                    backdrop-filter: var(--background-filter);
                     z-index: 99999998;
                 }
 
@@ -2263,25 +2266,25 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
                     db.$el.header = {firstElementChild: false}//Esto lo hacemos para setCursor no intente ejecutarse en el footer
                 }
 
-                db._loadUrl = (url) => {
+                db._loadUrl = async (url) => {
                     db.$el.body.textContent = 'Loading content...';
 
-                    loadFileContent(url, 'text', attr['abort-time'] || 7000).then((content) => {
-                        if (! content) { return false; }
+                    const result = await loadFileContent(url, 'html/text', attr['abort-time'] || false);
 
-                        db.$el.body.innerHTML = '';
-                        db.$el.body.appendChild(htmlToNode(content));
-    
-                        //Llamamos este método proveniente del defineCustomElement, por si hay elementos nuevos con la propiedad data-bind
-                        db._bindInteractiveElements();
-                        db._setFocus();
-                    }).catch((err) => {
-                        console.error('Error: ', err);
+                    if (! result.ok) {
+                        console.error('Error: ', result?.message || result);
     
                         db.$el.body.innerHTML = /*html*/`
                             <h5 class="error-text-color">No se pudo cargar el contenido<h5><p>Es posible que se encuentre offline</p>
                         `;
-                    });
+                    } else {
+                        db.$el.body.innerHTML = '';
+                        db.$el.body.appendChild(htmlToNode(result.data));
+    
+                        //Llamamos este método proveniente del defineCustomElement, por si hay elementos nuevos con la propiedad data-bind
+                        db._bindInteractiveElements();
+                        db._setFocus();
+                    }
                 }
 
                 db._closeDialog = function(e, id) {
@@ -2688,14 +2691,16 @@ si no se detectan algunos básicos y necesarios, estos serán agregados automát
                 if (attr['src']) {
                     console.log(11111111);
 
-                    loadFileContent(url, 'text', attr['abort-time'] || 7000).then((content) => {
+                    const result = await loadFileContent(url, 'html/text', attr['abort-time'] || false);
+
+                    if (! result.ok) {
+                        console.error('Error: ', result?.message || result);
+                    } else {
                         cpnt._root.appendChild(appendActions(document.createRange().createContextualFragment(content)));
 
                         console.log(222222222);
-                    }).catch((err) => {
-                        console.log(err);
-                    });
-
+                    }
+                    
                     console.log(33333333);
                 }
             }

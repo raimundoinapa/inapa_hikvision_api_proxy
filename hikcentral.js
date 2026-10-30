@@ -1,12 +1,12 @@
-//Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
+//Developed by Raimundo Araujo - +18493768181 / https://rcsoft.club.com
 
 (async () => {
     const nodeEnv = 'undefined' != typeof process ? process : {};
 
     if ('development' == nodeEnv?.env?.NODE_ENV) {
         //Bypasses TLS certificate verification. It should be only for dev enviroments.
-         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-     }
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
 
     const apiServerUrl = nodeEnv?.env?.HIKVISION_API_URL || 'https://172.30.4.200';
     const partnerKey = nodeEnv?.env?.HIKVISION_PARTNER_KEY || '25446123';
@@ -309,6 +309,15 @@
 
         if (ecData?.total && ecData?.list?.length && ecData.total > ecData.list.length) {
             await getAllPages(ecData, endpoints.encodeDeviceList, params.encodeDeviceList);
+        }
+
+        if (encodeDeviceListResult?.data?.list?.length) {
+            //👀: We added this block because the device ip address is not relevant for the frontend 
+            encodeDeviceListResult.data.list = encodeDeviceListResult.data.list.map((m) => {
+                delete m.encodeDevIp;
+
+                return m;
+            });
         }
 
         /*

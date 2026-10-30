@@ -1,8 +1,8 @@
 //Desarrollado por Raimundo Araujo - +18493768181 / https://rcsoft.club.com
  
 (async () => {
-    const {app, q, select, create, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
-    const defaultStreamProtocol = 'websocket';
+    const {app, q, select, create, sleep, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
+    const defaultStreamProtocol = 'websocket';//websocket ó websocket_s
     const endpoints = {
         auth: '/auth/login',
         health: '/health',
@@ -28,9 +28,8 @@
     };
     
     const maxFailedTokenCount = 3;
-    const appLoadTimestamp = new Date().getTime();
     const dbMinTimeBetweenUpdates = 3 * 60 * 60 * 1000;//Tres horas
-    const captureMinTimeBetweenUpdates = 1 * 60 * 60 * 1000;//Una hora
+    const captureMinTimeBetweenUpdates = 2 * 60 * 60 * 1000;//Una hora
     const statusOptions = {
         '': 'Todos',
         1: 'Online',
@@ -53,8 +52,10 @@
     }, {});
     const maxVisiblePaginationButtons = 5;
     const configOptions = app.get('configOptions') ? JSON.parse(app.get('configOptions')) : {
-        username: '',
-        usertoken: '',
+        token: '',
+        tokenExpiresIn: '',
+        tokenCreatedAt: '',
+        clientId: '',
         filterStatus: Object.keys(statusOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b)[0],
         filterFavorites: [],
         filterCapabilities: [],
@@ -68,7 +69,6 @@
         lastDBUpdate: '',
         invalidTokenCount: 0
     };
-    const cameraCount = {online: 0, offline: 0};
     const specialFilterStoreNames = ['filterFavorites', 'filterCapabilities', 'filterDevices', 'filterAreas'];
     const sortProps = ['cameraName', ['area', 'name'], ['encodeDeviceInfo', 'encodeDevName']];
     const dataObj = {
@@ -76,12 +76,14 @@
         remote: [],
         filtered: []
     };
+    const favFav = ['favorites', 'Favoritos'];
     const filtersObj = {
-        favorites: [['favorites', 'Favoritos']],
+        favorites: [favFav],
         capabilities: [],
         devices: [],
         areas: [],
     };
+    const cameraCount = {online: 0, offline: 0};
     const playersStatus = {};
 
     var jsDecoder = {};
@@ -125,34 +127,98 @@
         return await dbStart(dbName, dbVersion, dbUpdate);
     })();
 
+    const loginDialog = q('#login-dialog');
+    const loginForm = loginDialog._select('form');
+    const loginErrorMsgHolder = loginDialog._select('.errorMsg');
     const jsPluginGridContainerId = 'jsPluginGridContainer';
     const jsPluginContainer = select(`#${jsPluginGridContainerId}`);
     const videoPlayerContainerIdIndex = 'jsPluginGridContainerplayer-container-';
-    const videoPlayerIdIndex = 'jsPluginGridContainer_playWindow';
+    const canvasPlayerIdPrefix = 'jsPluginGridContainer_playCanvas';
+    const videoPlayerIdPrefix = 'jsPluginGridContainer_playWindow';
     const globalPreloader = q('.global-preloader');
+    const clientIdBadge = q('#client-id-badge');
     const onlineBadge = q('#online-badge');
     const offlineBadge = q('#offline-badge');
     const totalBadge = q('#total-badge');
     const toolsForm = q('#tools-form');
+    const searchBox = q('#search');
+    const filtersDialogContainer = q('[aria-controls="filters-dialog"]').parentNode;
     const filtersDialog = q("#filters-dialog");
+    const shareScreenDialog = select("#share-screen-dialog");
     const btnStartAll = q('#btn-start-all');
     const btnStopAll = q('#btn-stop-all');
     const btnFullscreenAll = q('#btn-fullscreen-all');
     const btnRefreshAll = q('#btn-refresh-all');
     const gridWrapper = q('#camera-grid-wrapper');
     const paginationContainer = q('#pagination');
-    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
-    const scrollbarWidth = (() => {
-        const div = create('div', false, {style: {position: 'absolute', visibility: 'hidden', overflow: 'scroll', width: '100px'}});
+    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 1, backgroundColor: 'var(--bg-color-3)'}});
+    const screenSize = (() => {
+        const div = create('div', false, {style: {position: 'absolute', visibility: 'hidden', overflow: 'scroll', width: '100%'}});
 
         document.body.appendChild(div);
-      
-        const w = div.offsetWidth - div.clientWidth;
-
+    
+        const screenWidth = screen.width > div.clientWidth ? screen.width : div.clientWidth;
+        const screenWidthWithoutScrollbar = screenWidth - (div.offsetWidth - div.clientWidth);
+        
         div._remove();
 
-        return w;
+        return {width: screenWidth, widthWithoutScrollbar: screenWidthWithoutScrollbar};
     })();
+    const maxWidth = Math.round(screenSize.width / 1.347368421052632);
+
+    const isFullscreen = () => {
+        return ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'].some(f => document?.[f]);
+    }
+
+    const exitFullscreenFnc = () => {
+        const efsFnc = ['exitFullscreen', 'webkitExitFullscreen', 'mozExitFullscreen', 'msExitFullscreen'].filter(f => document?.[f])?.[0];
+
+        if (document?.[efsFnc]) { document[efsFnc](); }
+        
+        return true;
+    }
+
+    const addSwipeListener = (element, swipeFnc) => {
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const threshold = 50; //Distancia mínima de seipe en pixeles
+
+        element.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        element.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+        
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+
+            if (Math.abs(deltaX) > threshold) {
+                swipeFnc?.(deltaX < 0 ? 'left' : 'right');
+            }
+        }
+    }
+
+    const addDblTapListener = (element, dblTapFnc) => {
+        let lastTap = 0;
+        const doubleTapDelay = 300;//ms
+
+        element.addEventListener('touchstart', function(e) {
+            const currentTime = new Date().getTime();
+            const tapGap = currentTime - lastTap;
+
+            if (tapGap < doubleTapDelay && tapGap > 0) {
+                e.preventDefault();//Evita que haga zoom
+                
+                dblTapFnc();
+            }
+
+            lastTap = currentTime;
+        });
+    }
 
     const saveConfig = () => { app.set('configOptions', JSON.stringify(configOptions)); }
 
@@ -169,50 +235,24 @@
         document.body.appendChild(sb);
     }
 
-    const login = async () => {
-        const authToken = await runFetch(endpoints.auth, {
-            method: 'POST',
-            headers: {'content-type': 'application/json'},
-            body: JSON.stringify({username: 'admin', password: 'admin123'})
-        });
-
-        //OJO: Esta línea simula un loguo exitoso
-        //const authToken = { data: {username: 'admin', token: 'asdfadfasdfasd'}};
-    
-        if (! authToken?.data?.token) {
-            showSnackbar('Error de autenticación', 'warning');
-
-            console.error('Error de autenticación');
-    
-            return false;
-        }
-    
-        configOptions.invalidTokenCount = 0;
-        configOptions.username = authToken.data.username;
-        configOptions.token = authToken.data.token;
-        saveConfig();
-
-        return true;
-    }
-
     const isAllowed = (res) => {
-        if (403 == res?.httpStatusCode) {
+        if (401 == res?.httpStatusCode || 403 == res?.httpStatusCode) {
             configOptions.invalidTokenCount++;
             saveConfig();
 
             if (configOptions.invalidTokenCount < maxFailedTokenCount) { window.location.reload(); }
 
-            const invalidCredentialsMsg = 'Credenciales de autenticación inválidas, póngase en contacto con el administrador';
+            const invalidCredentialsMsg = res?.message || 'Invalid credentials';
 
             showSnackbar(invalidCredentialsMsg, 'warning');
-
-            console.error(invalidCredentialsMsg);
 
             return false;
         }
 
         return true;
     }
+
+    const showLoginForm = async () => { loginDialog.setAttr = {state: 'active'}; }
 
     const filterData = async () => {
         dataObj.filtered = await dbRequest._getAll('cameras');
@@ -351,8 +391,8 @@
         
         jsDecoder = await new JSPlugin({
             szId: jsPluginGridContainerId,
-            /* iWidth: '100%',
-            iHeight: '100%', */
+            /* iWidth: screenSize.width / configOptions.gridSize,
+            iHeight: Math.floor((screenSize.width) / (16/9)), */
             iMaxSplit: parseInt(configOptions.gridSize),
             iCurrentSplit: parseInt(configOptions.gridSize),
             szBasePath: "/jsplugin",
@@ -382,9 +422,9 @@
             return false;
         }
 
-        gridWrapper.appendChild(gridPreloader);
+        gridContainer.appendChild(gridPreloader);
         
-        //Limpiamos todo
+        //Limpiamos todos los estados
         Object.keys(playersStatus).forEach(p => delete playersStatus[p]);
 
         //Si el grid es 4x4
@@ -395,12 +435,21 @@
         }
 
         let iterationNum = 0;
+        let stopLoop = false;
 
         for (let i = range.from; i <= range.to; i++) {
             const camIndex = iterationNum;
             const camera = dataObj.filtered[i];
+
+            if (! camera) {
+                iterationNum++;
+
+                continue;
+            }
+
             const videoPlayerContainer = q(`#${videoPlayerContainerIdIndex}${camIndex}`);
-            const videoPlayer = q(`#${videoPlayerIdIndex}${camIndex}`);
+            const videoPlayer = q(`#${videoPlayerIdPrefix}${camIndex}`);//JSPlugin usa este elemento como player o el elemento canvas siguiente
+            const canvasPlayer = q(`#${canvasPlayerIdPrefix}${camIndex}`);//JSPlugin usa este elemento como player dependiendo de alguna propiedad del navador que no conozco
             const jqObj = Object.keys(videoPlayerContainer)?.[0];
 
             //Le quitamos los eventos para fullscreen y otros eventos agregados por JSPlugin al elemento video
@@ -410,27 +459,12 @@
                 delete videoPlayerContainer[jqObj];
             }
 
-            //Agregamos nuestra propia versión de fullscreen
-            videoPlayerContainer._on('dblclick', (evt) => {
-                const exitFS = ['exitFullscreen', 'webkitExitFullscreen', 'mozExitFullscreen', 'msExitFullscreen'];
-                const elcFS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'];
-                const docFSE = ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement', 'msFullscreenElement'];
-                const fsExitFnc = exitFS.filter(f => document?.[f])?.[0];
-                const fsFnc = elcFS.filter(f => videoPlayerContainer?.[f])?.[0];
-                const isFullscreen = docFSE.some(f => document?.[f]);
-
-                if (! isFullscreen) {
-                    if (fsFnc) { videoPlayerContainer[fsFnc](); }
-                } else {
-                    if (fsExitFnc) { document[fsExitFnc](); }
-                }
-            });
-
-            if (! camera) {
-                iterationNum++;
-
-                continue;
-            }
+            //Cuando JSPlugin usa este elemento como player, para que se veo bien debe tener las dimensiones señaladas explícitamente
+            canvasPlayer.width = canvasPlayer.clientWidth;
+            canvasPlayer.height = canvasPlayer.clientHeight;
+            //Guardo una referencia de las dimensiones originales
+            canvasPlayer.dataset.width = canvasPlayer.clientWidth;
+            canvasPlayer.dataset.height = canvasPlayer.clientHeight;
 
             const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
             const isOnline = camera?.status && camera.status.toString() == '1';
@@ -480,6 +514,12 @@
                 <div class="camera-name-container">
                     <div class="camera-name protected-from-dark">${nameBadge}</div>
                 </div>
+                <div class="btns-share-screen" data-cod="${camera.cameraIndexCode}" style="margin: 2px 0 0 4px;">
+                    <a-button icon circle aria-label="Enviar a pantalla 1" data-num="1" data-cod="${camera.cameraIndexCode}" info style="width: 1rem;"><small>1</small></a-button>
+                    <a-button icon circle aria-label="Enviar a pantalla 2" data-num="2" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>2</small></a-button>
+                    <a-button icon circle aria-label="Enviar a pantalla 3" data-num="3" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>3</small></a-button>
+                    <a-button icon circle aria-label="Enviar a pantalla 4" data-num="4" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>4</small></a-button>
+                </div>
                 <div id="stream-error-msg-${camera.cameraIndexCode}" class="stream-error-msg-container d-none">
                     <div class="stream-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error del servidor de streaming</div>
                 </div>
@@ -494,7 +534,7 @@
                 isMainStream: false,
                 captureRetry: false,
                 streamError: false,
-                playStopFnc: false
+                playStopFnc: false,
             }
 
             const vpStatus = playersStatus[camera.cameraIndexCode];
@@ -506,6 +546,21 @@
             const btnFavorite = q(`#favorite-${camera.cameraIndexCode}`);
             const cameraStatusMsg = q(`#camera-status-msg-${camera.cameraIndexCode}`);
             const streamErrorMsg = q(`#stream-error-msg-${camera.cameraIndexCode}`);
+            const btnsShareScreen = q(`[data-cod="${camera.cameraIndexCode}"] a-button`, true);
+
+            btnsShareScreen.forEach((b) => {
+                b._on('click', async (evt) => {
+                    evt.preventDefault();
+
+                    runFetch('/share_camera_alt', {
+                        method: 'post',
+                        body: JSON.stringify({
+                            clientId: evt?.target?.dataset?.num,
+                            streamUrl: camera.mainStream
+                        }),
+                    });
+                });
+            });
             
             const imBusy = () => {
                 videoPlayerContainer.appendChild(preloader);
@@ -560,12 +615,12 @@
 
                 imBusy();
 
-                const timeStamp = new Date().getTime();
+                const timestamp = new Date().getTime();
 
                 let capturedPicture = '';
     
                 if (! vpStatus.isPlaying) {
-                    if (! camera?.captureTimestamp || (timeStamp - camera.captureTimestamp) > captureMinTimeBetweenUpdates) {
+                    if (! camera?.captureTimestamp || (timestamp - camera.captureTimestamp) > captureMinTimeBetweenUpdates) {
                         const capture = await runFetch(endpoints.protected.capture, {
                             method: 'POST',
                             headers: {
@@ -575,7 +630,13 @@
                             timeout: 10000
                         });
 
-                        if (! isAllowed(capture) || ! capture?.data || capture?.data?.code) {
+                        if (! isAllowed(capture)) {
+                            stopLoop = true;
+        
+                            return false;
+                        }
+
+                        if (! capture?.data || capture?.data?.code) {
                             vpStatus.streamError = true;
 
                             //showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
@@ -599,16 +660,20 @@
                     
                     capturedPicture = canvas.toDataURL('image/png');
 
+                    if  (capturedPicture && 'data:,' == capturedPicture) {
+                        capturedPicture = canvasPlayer.toDataURL('image/png');
+                    }
+
                     if (download) {
-                        const link = create('a', {href: capturedPicture, download: `${camera.cameraIndexCode}_capture_${timeStamp}.png`});
+                        const link = create('a', {href: capturedPicture, download: `${camera.cameraIndexCode}_capture_${timestamp}.png`});
     
                         link.click();
                     }
                 }
 
-                if  (capturedPicture) {                    
+                if  (capturedPicture && 'data:,' != capturedPicture) {
                     camera.capture = capturedPicture;
-                    camera.captureTimestamp = timeStamp;
+                    camera.captureTimestamp = timestamp;
                     dbRequest._put('cameras', camera);
 
                     videoPlayerContainer.style.backgroundImage = `url(${capturedPicture})`;
@@ -631,14 +696,14 @@
                         jsDecoder.JS_Play(stremUrl, {
                             playURL: stremUrl,
                             auth: '',
-                            token: '',
                             mode: 'media',
+                            token: '',
                         }, camIndex).then(async () => {
                             vpStatus.isPlaying = true;
                             vpStatus.isMainStream = isMainStream;
                             vpStatus.streamError = false;
 
-                            console.log(`Transmisión de la cámara ${camIndex} (${camera.cameraIndexCode}) iniciada satisfactoriamente`);
+                            //console.log(`Transmisión de la cámara ${camIndex} (${camera.cameraIndexCode}) iniciada satisfactoriamente`);
 
                             return resolve(true);
                         }, () => {
@@ -658,7 +723,7 @@
 
                     await new Promise((resolve) => {
                         jsDecoder.JS_Stop(camIndex).then(() => {
-                            console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
+                            //console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
 
                             vpStatus.isPlaying = false;
                             vpStatus.isMainStream = false;
@@ -677,13 +742,39 @@
                 return true;
             }
 
+            const enterFullscreen = (evt) => {
+                const elemFullscreenProp = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullscreen', 'msRequestFullscreen'].filter(f => videoPlayerContainer?.[f])?.[0];
+
+                if (! isFullscreen()) {
+                    if (elemFullscreenProp) {
+                        videoPlayerContainer[elemFullscreenProp]();
+
+                        //Fijamos el tamaño de la pantalla completa asumiendo que el aspec ratio es 16/9
+                        canvasPlayer.width = screenSize.width;
+                        canvasPlayer.height = screenSize.width / (16/9);
+                    }
+                } else {
+                    exitFullscreenFnc();
+
+                    //Restauro las dimensiones originales
+                    canvasPlayer.removeAttribute('width');
+                    canvasPlayer.removeAttribute('height');
+                    canvasPlayer.width = canvasPlayer.dataset.width;
+                    canvasPlayer.height = canvasPlayer.dataset.height;
+                }
+            }
+
+            videoPlayerContainer._on('dblclick', enterFullscreen);
+
+            addDblTapListener(videoPlayerContainer, enterFullscreen);
+
             btnPlay._on('click', async (evt) => {
                 evt.preventDefault();
                 
                 playStopStream();
             });
     
-            btnCapure._on('click', async (evt) => {;
+            btnCapure._on('click', async (evt) => {
                 evt.preventDefault();
 
                 takePicture(true);
@@ -733,28 +824,35 @@
                     timeout: 10000
                 });
 
-                if (isAllowed(capture) && cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
-                    vpStatus.isOnline = true;
+                imNotBusy();
 
-                    if (camera?.captureTimestamp && camera?.capture) {
-                        cameraCheck.captureTimestamp = camera.captureTimestamp;
-                        cameraCheck.capture = camera.capture;
-                    }
+                if (! isAllowed(cameraCheck)) {
+                    window.location.reload(true);
 
-                    dbRequest._put('cameras', cameraCheck);
+                    return;
                 }
 
-                imNotBusy();
+                if (cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
+                    vpStatus.isOnline = true;
+
+                    takePicture();
+                }
             });
             
             imNotBusy();//Activamos los botones necesarios
+
+            if (stopLoop) {
+                window.location.reload();
+                
+                break;
+            }
             
             if (vpStatus.isOnline) {
                 vpStatus.playStopFnc = playStopStream;
 
                 if (! camera?.captureTimestamp) {
                     (async () => {
-                        console.log(`Tomando foto remota a la cámara ${camIndex} (${camera.cameraIndexCode})`);
+                        //console.log(`Tomando foto remota a la cámara ${camIndex} (${camera.cameraIndexCode})`);
     
                         await takePicture();
     
@@ -763,7 +861,7 @@
     
                             vpStatus.captureRetry = true;
 
-                            console.log(`Intentaremos tomar la foto remota de nuevo a la cámara ${camIndex} (${camera.cameraIndexCode})`);
+                            //console.log(`Intentaremos tomar la foto remota de nuevo a la cámara ${camIndex} (${camera.cameraIndexCode})`);
                         }
                     })();
                 }
@@ -771,13 +869,25 @@
 
             iterationNum++;
         }
+        
+        addSwipeListener(gridContainer, (direction = 'left') => {
+            const btns = q('#pagination a-button', true) || [];
+            const btnPrev = btns?.[0] || false;
+            const btnNext = btns?.[btns.length - 1] || false;
+
+            if ('left' == direction && btnNext) {
+                btnNext.click();
+            } else {
+                if (btnPrev) { btnPrev.click(); }
+            }
+        });
 
         gridPreloader._remove();
 
         return true;
     }
 
-    const createPagination = (isTriggeredByButton = false) => {
+    const createPagination = () => {
         if (! dataObj.filtered.length) {
             paginationContainer.innerHTML = '';
 
@@ -815,7 +925,7 @@
                 configOptions.currentPage--;
                 saveConfig();
                 
-                reCreateGrid(true);
+                reCreateGrid();
 
                 return false;
             });
@@ -890,7 +1000,7 @@
         paginationContainer.appendChild(paginationForm);
     }
 
-    const reCreateGrid = async (isTriggeredByButton = false) => {
+    const reCreateGrid = async () => {
         disablePagination();
         disableForm(toolsForm);
         disableForm(filtersDialog.$el['filters-form']);
@@ -901,215 +1011,306 @@
 
         await createGrid();
 
-        createPagination(isTriggeredByButton);
+        createPagination();
         enableForm(toolsForm);
         enableForm(filtersDialog.$el['filters-form']);
     }
 
-    if (! configOptions.token) {
-        if (! await login()) { return false; }
+    const runSetup = async () => {
+        dataObj.local = await dbRequest._getAll('cameras');
 
-        const version = await runFetch(endpoints.protected.version, {
-            method: 'POST',
-            headers: {
-                authorization: `Bearer ${configOptions.token}`
+        if (! configOptions?.lastDBUpdate || (new Date().getTime() - configOptions.lastDBUpdate) > dbMinTimeBetweenUpdates) {
+            if (! configOptions.lastDBUpdate) {
+                showSnackbar(`<h2>Instalando</h2><p>Actualizando base de datos...</p>`, 'info');
+            } else {
+                showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. <br>Ejecutaremos una nueva actualización</p>`, 'info');
             }
-        });
-        
-        console.log(version);
-    }
 
-    const authCheck = await runFetch(endpoints.protected.authCheck, {
-        method: 'POST',
-        headers: {
-            authorization: `Bearer ${configOptions.token}`
-        }
-    });
-
-    if (! isAllowed(authCheck) || 'success' != authCheck?.status) {   
-        if (! await login()) { return false; }
-    }
-
-    dataObj.local = await dbRequest._getAll('cameras');
-
-    if (! configOptions.lastDBUpdate || (appLoadTimestamp - configOptions.lastDBUpdate) > dbMinTimeBetweenUpdates) {
-        if (! configOptions.lastDBUpdate) {
-            showSnackbar(`<h2>Instalando</h2><p>Actualizando base de datos...</p>`, 'info');
-        } else {
-            showSnackbar(`<h2>Actualizando</h2><p>Base de datos actuazada por última vez el ${getISO8601Timestamp(configOptions.lastDBUpdate)}. <br>Ejecutaremos una nueva actualización</p>`, 'info');
-        }
-
-        dataObj.remote = await runFetch(endpoints.protected.integral, {
-            method: 'POST',
-            headers: {
-                authorization: `Bearer ${configOptions.token}`
-            },
-            body: JSON.stringify({protocol: defaultStreamProtocol}),
-            timeout: 60000
-        });
-
-        dataObj.remote = dataObj.remote?.data?.list || [];
-
-        //OJO: Estas dos líneas so para simular la respuesta del server
-        //dataObj.remote = await runFetch('./db.json');
-        //dataObj.remote = dataObj.remote?.data?.list || [];
-
-        if (dataObj.remote?.length) {
-            const localDbUpdates = [];
-            
-            if (dataObj.local?.length) {
-                const localDbCaptures = [];
-    
-                dataObj.remote.forEach((f) => {
-                    localDbCaptures.push(dbRequest._get('cameras', {index: 'cameraIndexCode', value: f.cameraIndexCode}));
-                });
-    
-                if (localDbCaptures?.length) {
-                    await Promise.all(localDbCaptures);
-        
-                    localDbCaptures.forEach((c, i) => {
-                        if (c.capture && c.captureTimestamp) {
-                            dataObj.remote[i].capture = c.capture;
-                            dataObj.remote[i].captureTimestamp = c.captureTimestamp;
-                        }
-                    });
-                }
-    
-                await dbRequest._clear('cameras');    
-            }
-    
-            dataObj.remote.forEach((c, i) => {
-                if (! c.capabilitySet) { c.capabilitySet = 'unknow'; }
-                if (! c.encodeDevIndexCode || ! c?.encodeDeviceInfo?.encodeDevIndexCode) {
-                    c.encodeDevIndexCode = 'unknow';
-                    c.encodeDeviceInfo = {
-                        encodeDevIndexCode: 'unknow',
-                        encodeDevName: 'Unknow',
-                    }
-                }
-                if (! c.regionIndexCode || ! c?.area?.indexCode) {
-                    c.regionIndexCode = 'unknow';
-                    c.area = {
-                        indexCode: 'unknow',
-                        name: 'Unknow',
-                    }
-                }
-
-                localDbUpdates.push(dbRequest._put('cameras', c, true));
+            const integralData = await runFetch(endpoints.protected.integral, {
+                method: 'POST',
+                headers: {
+                    authorization: `Bearer ${configOptions.token}`
+                },
+                body: JSON.stringify({protocol: defaultStreamProtocol}),
+                timeout: 60000
             });
 
-            if (localDbUpdates.length) {
-                await Promise.all(localDbUpdates);
+            if (! isAllowed(integralData)) {
+                window.location.reload(true);
 
-                configOptions.lastDBUpdate = new Date().getTime();
-                saveConfig();
-
-                console.log('Base de datos actualizada');
+                return;
             }
-        }
 
-        dataObj.local = dataObj.remote;
-    }
+            dataObj.remote = integralData?.data?.list || [];
 
-    dataObj.local.forEach((f) => {
-        filtersObj.capabilities.push([f.capabilitySet, f.capabilitySet]);
-        filtersObj.devices.push([f.encodeDevIndexCode, f.encodeDeviceInfo.encodeDevName]);
-        filtersObj.areas.push([f.regionIndexCode, f.area.name]);
-
-        if (1 == f.status) { cameraCount.online++; } else { cameraCount.offline++; }
-    });
-
-    onlineBadge.$el.body.innerHTML = `${cameraCount.online} Online`;
-    offlineBadge.$el.body.innerHTML = `${cameraCount.offline} Offline`;
-    totalBadge.$el.body.innerHTML = `${cameraCount.online + cameraCount.offline} Total`;
-
-    toolsForm.elements['search'].value = configOptions.searchKeywords;
-    
-    Object.keys(statusOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b).forEach((k) => {
-        toolsForm.elements['status-select'].appendChild(create('option', {value: k}, {innerHTML: statusOptions[k]}));
-    });
-    toolsForm.elements['status-select'].value = configOptions.filterStatus;
-
-    Object.keys(filtersObj).forEach((k, i) => {
-        const fInputContainer = filtersDialog.$el[`${k}-container`];
-        const fcBody = filtersDialog.$el[`${k}-selected-count`].$el.body;
-        const filterCount = {
-            total: 0,
-            selected: 0
-        };
-
-        fInputContainer.innerHTML = '';
-
-        if (filtersObj[k].length) {
-            filtersObj[k] = [...new Set(filtersObj[k].map(JSON.stringify))].map(JSON.parse);//Quitamos los duplicados del array de arrays
-            filtersObj[k].sort((a, b) => a[1].localeCompare(b[1]));//Sorteamos por nombre;
-    
-            filtersObj[k].forEach((c) => {
-                const checked = configOptions?.[specialFilterStoreNames[i]]?.length && configOptions[specialFilterStoreNames[i]].includes(c[0]) ? ' checked' : '';
-                const inp = create('div', false, {innerHTML: `<label><input type="checkbox" name="${k}-${c[0]}" value="${c[0]}"${checked}> ${c[1]}</label>`});
-
-                inp._on('change', (evt) => {
-                    if (! evt.target.checked) {
-                        fcBody.innerHTML = Number(fcBody.innerHTML.trim()) - 1;
-
-                        return false;
-                    }
-
-                    fcBody.innerHTML = Number(fcBody.innerHTML.trim()) + 1;
-                });
-        
-                fInputContainer.appendChild(inp);
+            if (dataObj.remote?.length) {
+                const localDbUpdates = [];
                 
-                filterCount.total++;
-                if (checked) { filterCount.selected++; }
-            });
+                if (dataObj.local?.length) {
+                    const localDbCaptures = [];
+        
+                    dataObj.remote.forEach((f) => {
+                        localDbCaptures.push(dbRequest._get('cameras', {index: 'cameraIndexCode', value: f.cameraIndexCode}));
+                    });
+        
+                    if (localDbCaptures?.length) {
+                        await Promise.all(localDbCaptures);
+            
+                        localDbCaptures.forEach((c, i) => {
+                            if (c.capture && c.captureTimestamp) {
+                                dataObj.remote[i].capture = c.capture;
+                                dataObj.remote[i].captureTimestamp = c.captureTimestamp;
+                            }
+                        });
+                    }
+        
+                    await dbRequest._clear('cameras');    
+                }
+        
+                dataObj.remote.forEach((c, i) => {
+                    if (! c.capabilitySet) { c.capabilitySet = 'unknow'; }
+                    if (! c.encodeDevIndexCode || ! c?.encodeDeviceInfo?.encodeDevIndexCode) {
+                        c.encodeDevIndexCode = 'unknow';
+                        c.encodeDeviceInfo = {
+                            encodeDevIndexCode: 'unknow',
+                            encodeDevName: 'Unknow',
+                        }
+                    }
+                    if (! c.regionIndexCode || ! c?.area?.indexCode) {
+                        c.regionIndexCode = 'unknow';
+                        c.area = {
+                            indexCode: 'unknow',
+                            name: 'Unknow',
+                        }
+                    }
 
-            filtersDialog.$el[`${k}-count`].$el.body.innerHTML = filterCount.total;
-            fcBody.innerHTML = filterCount.selected;
+                    /* if (c?.mainStream?.includes('127.0.0.1')) {
+                        c.mainStream = c.mainStream.replace('127.0.0.1', window.location.hostname);
+                        c.subStream = c.subStream.replace('127.0.0.1', window.location.hostname);
+                    } */
+
+                    localDbUpdates.push(dbRequest._put('cameras', c, true));
+                });
+
+                if (localDbUpdates.length) {
+                    await Promise.all(localDbUpdates);
+
+                    configOptions.lastDBUpdate = new Date().getTime();
+                    saveConfig();
+
+                    //console.log('Base de datos actualizada');
+                }
+            }
+
+            dataObj.local = dataObj.remote;
+        }
+
+        dataObj.local.forEach((f) => {
+            filtersObj.capabilities.push([f.capabilitySet, f.capabilitySet]);
+            filtersObj.devices.push([f.encodeDevIndexCode, f.encodeDeviceInfo.encodeDevName]);
+            filtersObj.areas.push([f.regionIndexCode, f.area.name]);
+
+            if (1 == f.status) { cameraCount.online++; } else { cameraCount.offline++; }
+        });
+
+        onlineBadge.$el.body.innerHTML = `${cameraCount.online} Online`;
+        offlineBadge.$el.body.innerHTML = `${cameraCount.offline} Offline`;
+        totalBadge.$el.body.innerHTML = `${cameraCount.online + cameraCount.offline} Total`;
+
+        searchBox.value = configOptions.searchKeywords;
+        searchBox.focus();
+        
+        Object.keys(statusOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b).forEach((k) => {
+            toolsForm.elements['status-select'].appendChild(create('option', {value: k}, {innerHTML: statusOptions[k]}));
+        });
+        toolsForm.elements['status-select'].value = configOptions.filterStatus;
+
+        Object.keys(filtersObj).forEach((k, i) => {
+            const fInputContainer = filtersDialog.$el[`${k}-container`];
+            const fcBody = filtersDialog.$el[`${k}-selected-count`].$el.body;
+            const filterCount = {
+                total: 0,
+                selected: 0
+            };
+
+            if (filtersObj[k].length) {
+                filtersObj[k] = [...new Set(filtersObj[k].map(JSON.stringify))].map(JSON.parse);//Quitamos los duplicados del array de arrays
+                filtersObj[k].sort((a, b) => a[1].localeCompare(b[1]));//Sorteamos por nombre;
+        
+                filtersObj[k].forEach((c) => {
+                    const checked = configOptions?.[specialFilterStoreNames[i]]?.length && configOptions[specialFilterStoreNames[i]].includes(c[0]) ? ' checked' : '';
+                    const inp = create('div', false, {innerHTML: `<label><input type="checkbox" name="${k}-${c[0]}" value="${c[0]}"${checked}> ${c[1]}</label>`});
+
+                    inp._on('change', (evt) => {
+                        if (! evt.target.checked) {
+                            fcBody.innerHTML = Number(fcBody.innerHTML.trim()) - 1;
+
+                            return false;
+                        }
+
+                        fcBody.innerHTML = Number(fcBody.innerHTML.trim()) + 1;
+                    });
+            
+                    fInputContainer.appendChild(inp);
+                    
+                    filterCount.total++;
+                    if (checked) { filterCount.selected++; }
+                });
+
+                filtersDialog.$el[`${k}-count`].$el.body.innerHTML = filterCount.total;
+                fcBody.innerHTML = filterCount.selected;
+            }
+        });
+
+        //Fix para menú de filtros ya que tiene un super-form, y de iniciarse en la posición que queremos, estaría dentro de otro super-form lo que causa problemas al activarse el super-form inicial
+        filtersDialogContainer.appendChild(filtersDialog);
+
+        filtersDialog.$el.toggler.dataset.filterSet = ! isFilterActive() ? "false" : "true";
+
+        Object.keys(sortOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b).forEach((k) => {
+            toolsForm.elements['sort-select'].appendChild(create('option', {value: k}, {innerHTML: sortOptions[k]}));
+        });
+        toolsForm.elements['sort-select'].value = configOptions.sortBy;
+
+        Object.keys(gridOptions).sort((a, b) => b - a).forEach((k) => {
+            toolsForm.elements['grid-size-select'].appendChild(create('option', {value: k}, {innerHTML: gridOptions[k].replace('grid-', '')}));
+        });
+        toolsForm.elements['grid-size-select'].value = configOptions.gridSize;
+
+        return true;
+    }
+
+    const eventSource = new EventSource(`/sse_events?clientId=${configOptions.clientId}`);
+
+    eventSource.addEventListener("message", (e) => {
+        let response = {};
+        
+        try {
+            response = JSON.parse(e.data);
+        } catch (err) {
+            console.log(err);
+        } finally {}
+
+        console.log(e?.data, response?.event, response?.data);
+
+        if (! Object.keys(response) || ! response?.event || ! response?.data) { return; }
+
+        if ('connect' == response.event) {
+            configOptions.clientId = response.data;
+            saveConfig();
+
+            const clientIdParts = configOptions.clientId.split('-');
+            //⧉ 
+            const copyBtn = create('a', false, {href: "javascript:void(0);", innerHTML: `ID-${clientIdParts[clientIdParts.length - 1]}`, style: {color: 'white'}});
+            //const urlInput = create('input', {value: `${window.location.href}screen?id${configOptions.clientId}`}, {type: "text"});
+                        
+            /*copyBtn._on('click', async (evt) => {
+                if (! navigator?.clipboard || ! navigator?.clipboard?.writeText) {
+                    document.body.appendChild(urlInput);
+                    urlInput.select();
+                    document.execCommand("copy");
+                    urlInput._remove();
+
+                    showSnackbar(`<p>Url copiada</p>`, 'info');
+                } else {
+                    try {
+                        await navigator.clipboard.writeText(urlInput.value);
+
+                        showSnackbar(`<p>Url copiada</p>`, 'info');
+                    } catch (err) {
+                        console.log(err);
+                    }
+                }
+            });*/
+
+            clientIdBadge.$el.body.innerHTML = '';
+            clientIdBadge.$el.body.appendChild(copyBtn);
+
+            console.log('Conectado al servidor');
+            
+            return;
+        }
+
+        if ('update' == response.event) {
+            console.log(response?.data);
         }
     });
 
-    //Fix para menú de filtros ya que tiene un super-form, y de iniciarse en la posición que queremos, estaría dentro de otro super-form lo que causa problemas al activarse el super-form inicial
-    q('[aria-controls="filters-dialog"]').parentNode.appendChild(filtersDialog);    
-
-    filtersDialog.$el.toggler.dataset.filterSet = ! isFilterActive() ? "false" : "true";
-
-    Object.keys(sortOptions).sort((a, b) => a === '' || b === '' ? -1 : a - b).forEach((k) => {
-        toolsForm.elements['sort-select'].appendChild(create('option', {value: k}, {innerHTML: sortOptions[k]}));
+    eventSource.addEventListener("error", (e) => {
+        console.log('Error de conexión - reconectando', e);
     });
-    toolsForm.elements['sort-select'].value = configOptions.sortBy;
 
-    Object.keys(gridOptions).sort((a, b) => b - a).forEach((k) => {
-        toolsForm.elements['grid-size-select'].appendChild(create('option', {value: k}, {innerHTML: gridOptions[k].replace('grid-', '')}));
-    });
-    toolsForm.elements['grid-size-select'].value = configOptions.gridSize;
+    //Solo para PCs
+    if (maxWidth > 640) {
+        //Fix para fullscreen en pantallas diferentes a mi laptop tomando en cuenta el tamaño aproximado del scrollbar con hack para la pantalla interactiva de la dirección  
+        document.body.appendChild(create('style', false, {innerHTML: `
+            :root { --max-width: ${maxWidth}px; }
+            #camera-grid:-webkit-full-screen { --max-width: ${screenSize.widthWithoutScrollbar}px; }
+            #camera-grid:-moz-full-screen { --max-width: ${screenSize.widthWithoutScrollbar}px; }
+            #camera-grid:-ms-full-screen { --max-width: ${screenSize.widthWithoutScrollbar}px; }
+        `}));
+    } else {
+        document.body.appendChild(create('style', false, {innerHTML: `
+            :root { --max-width: 100%; }
+            #camera-grid:-webkit-full-screen { --max-width: 100%; }
+            #camera-grid:-moz-full-screen { --max-width: 100%; }
+            #camera-grid:-ms-full-screen { --max-width: 100%; }
+        `}));
+    }
 
-    //Fix para fullscreen en pantallas diferentes a mi laptop tomando en cuenta el tamaño aproximado del scrollbar
-    document.body.appendChild(create('style', false, {innerHTML: `
-        :root { --max-width: ${Math.round(screen.width / 1.347368421052632)}px; }
-        #camera-grid:-webkit-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
-        #camera-grid:-moz-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
-        #camera-grid:-ms-full-screen { --max-width: ${screen.width - scrollbarWidth}px; }
-    `}));
+    loginForm._fnc = async (frm, response, clonedResponse) => {
+        const resCode = response?.code || 401;
+        
+        if (resCode > 199 && resCode < 300) {
+            configOptions.invalidTokenCount = 0;
+            configOptions.token = response.data.token;
+            configOptions.tokenExpiresIn = response.data.expiresIn;
+            configOptions.tokenCreatedAt = response.data.timestamp;
+            saveConfig();
+
+            loginDialog.setAttr = {state: 'inactive'};
+
+            document.body.appendChild(globalPreloader);
+
+            if (await runSetup()) {
+                await reCreateGrid();
+            }
+
+            if (searchBox.value) { searchBox.focus(); }
+
+            globalPreloader.remove();
+
+            return;
+        }
+
+        loginErrorMsgHolder.innerHTML = response?.data?.message || 'Invalid Credentialss';
+    }
 
     //Esta viene siendo la acción del search
     toolsForm._onsubmit = async (evt, frm, frmData) => {
-        configOptions.searchKeywords = frm.elements['search'].value;
+        configOptions.searchKeywords = searchBox.value;
         configOptions.currentPage = 1;
         saveConfig(); 
         
         await reCreateGrid();
 
+        if (searchBox.value) {
+            searchBox.focus();
+            searchBox._event('focus');
+        }
+
         frm.elements['search-button'].$el.loadingBox._remove();
     };
 
-    toolsForm.elements['search']._on('input', (evt) => {
+    searchBox._on('input', async (evt) => {
         if (! evt.target.value) {
             configOptions.searchKeywords = '';
             configOptions.currentPage = 1;
             saveConfig();
             
-            reCreateGrid();
+            await reCreateGrid();
+
+            evt.target.focus();
         }
     });
 
@@ -1258,12 +1459,56 @@
         window.location.reload();
     });
 
-    await reCreateGrid();
+    shareScreenDialog.$el['btn-share-screen']._on('click', (evt) => {
+        const screenNum = shareScreenDialog?.$el?.['screen-select']?.value;
+        const camNum = Number(shareScreenDialog?.$el?.['camera-select']?.value || 0);
+        const streamType = shareScreenDialog?.$el?.['stream-select']?.value;
 
+        if (screenNum) {
+            const camera = ! camNum ? {} : dataObj.filtered?.[(configOptions.currentPage - 1) * itemsPerPage[configOptions.gridSize] + camNum - 1];
+            const streamUrl = ! streamType ? '' : 'subStream' != streamType ? camera?.mainStream || '' : camera?.subStream || '';
 
-    if (! dataObj.filtered.length) {
-        showSnackbar('No se encontraron resultados', 'warning');
+            runFetch('/share_camera', {
+                method: 'post',
+                body: JSON.stringify({
+                    clientId: configOptions.clientId,
+                    screenId: screenNum,
+                    streamUrl
+                }),
+            });
+        }
+
+        shareScreenDialog.setAttr = {state: 'inactive'};
+    });
+
+    if (! configOptions.token) {
+        showLoginForm();
+
+        globalPreloader.remove();
+
+        return;
     }
+    
+    const authCheck = await runFetch(endpoints.protected.authCheck, {
+        method: 'POST',
+        headers: {
+            authorization: `Bearer ${configOptions.token}`
+        }
+    });
+
+    if (! isAllowed(authCheck)) {
+        showLoginForm();
+
+        globalPreloader.remove();
+
+        return;
+    }
+    
+    if (await runSetup()) {
+        await reCreateGrid();
+    }
+
+    if (searchBox.value) { searchBox.focus(); }
 
     globalPreloader.remove();
 })();

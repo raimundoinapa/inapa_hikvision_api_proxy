@@ -24,6 +24,7 @@
             areas: '/api/areas',
             integralSingle: '/api/camera/integral',
             integral: '/api/cameras/integral',
+            captureUpload: '/api/camera/capture-upload',
         }
     };
     
@@ -88,6 +89,10 @@
 
     var jsDecoder = {};
 
+    const capturesFileExten = 'jpeg';
+    const capturesMimeType = `image/${capturesFileExten}`;
+    const dataUriFileType = `data:${capturesMimeType};base64,`;
+
     const dbName = app.get('dbName') || 'inapa_cctv';
     const dbVersion = app.get('dbVersion') || 1;
     const dbSchema = [
@@ -151,7 +156,7 @@
     const btnRefreshAll = q('#btn-refresh-all');
     const gridWrapper = q('#camera-grid-wrapper');
     const paginationContainer = q('#pagination');
-    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 1, backgroundColor: 'var(--bg-color-3)'}});
+    const gridPreloader = create('div', false, {className: 'preloader', style: {zIndex: 9997, backgroundColor: 'var(--bg-color-3)', opacity: 0.5}});
     const screenSize = (() => {
         const div = create('div', false, {style: {position: 'absolute', visibility: 'hidden', overflow: 'scroll', width: '100%'}});
 
@@ -162,7 +167,7 @@
         
         div._remove();
 
-        return {width: screenWidth, widthWithoutScrollbar: screenWidthWithoutScrollbar};
+        return {width: screenWidth, height: screenWidth / (16/9), widthWithoutScrollbar: screenWidthWithoutScrollbar};
     })();
     const maxWidth = Math.round(screenSize.width / 1.347368421052632);
 
@@ -381,28 +386,32 @@
 
         if (! playersPromises.length) { return false; }
 
-        await Promise.all(playersPromises);
+        await Promise.allSettled(playersPromises);
 
         return true;
     }
 
     const createGrid = async () => {
         jsPluginContainer.innerHTML = '';
-        
-        jsDecoder = await new JSPlugin({
-            szId: jsPluginGridContainerId,
-            /* iWidth: screenSize.width / configOptions.gridSize,
-            iHeight: Math.floor((screenSize.width) / (16/9)), */
-            iMaxSplit: parseInt(configOptions.gridSize),
-            iCurrentSplit: parseInt(configOptions.gridSize),
-            szBasePath: "/jsplugin",
-            /* oStyle: {
-                border: "#343434",
-                borderSelect: "red",
-                background: "#4C4B4B"
-            } */
-        });
 
+        try {
+            jsDecoder = await new JSPlugin({
+                szId: jsPluginGridContainerId,
+                /* iWidth: screenSize.width / configOptions.gridSize,
+                iHeight: screenSize.height, */
+                iMaxSplit: parseInt(configOptions.gridSize),
+                iCurrentSplit: parseInt(configOptions.gridSize),
+                szBasePath: "/jsplugin",
+                /* oStyle: {
+                    border: "#343434",
+                    borderSelect: "red",
+                    background: "#4C4B4B"
+                } */
+            });
+        } catch (err) {
+            console.log(err);
+        }
+        
         const gridContainer = jsPluginContainer.firstElementChild;
         const gridElems = jsPluginContainer._select('*', true);
 
@@ -459,18 +468,18 @@
                 delete videoPlayerContainer[jqObj];
             }
 
-            //Cuando JSPlugin usa este elemento como player, para que se veo bien debe tener las dimensiones señaladas explícitamente
+            //Cuando JSPlugin usa este elemento como player, para que se vea bien debe tener las dimensiones señaladas explícitamente
             canvasPlayer.width = canvasPlayer.clientWidth;
             canvasPlayer.height = canvasPlayer.clientHeight;
             //Guardo una referencia de las dimensiones originales
             canvasPlayer.dataset.width = canvasPlayer.clientWidth;
             canvasPlayer.dataset.height = canvasPlayer.clientHeight;
 
-            const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodingDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
+            const cameraFullName = [camera.cameraName, camera?.area?.name, camera?.encodeDeviceInfo?.encodeDevName].filter(f => f).join(' - ');
             const isOnline = camera?.status && camera.status.toString() == '1';
             const isPTZ = camera?.capabilitySet && camera.capabilitySet.toLowerCase().includes('ptz');
             const favoriteHighLight = ! configOptions.favorites.includes(camera.cameraIndexCode) ? '': ' info';
-            const preloader = create('div', false, {className: 'preloader', style: {zIndex: 1001}});
+            const preloader = create('div', false, {className: 'preloader', style: {zIndex: 9997}});
             const nameBadge = `<span class="small">${cameraFullName}</span>`;
             const onlineBadge = '<a-badge danger pulse>Online</a-badge>';
             const offlineBadge = '<a-badge danger pulse>Offline</a-badge>';
@@ -514,11 +523,13 @@
                 <div class="camera-name-container">
                     <div class="camera-name protected-from-dark">${nameBadge}</div>
                 </div>
-                <div class="btns-share-screen" data-cod="${camera.cameraIndexCode}" style="margin: 2px 0 0 4px;">
-                    <a-button icon circle aria-label="Enviar a pantalla 1" data-num="1" data-cod="${camera.cameraIndexCode}" info style="width: 1rem;"><small>1</small></a-button>
-                    <a-button icon circle aria-label="Enviar a pantalla 2" data-num="2" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>2</small></a-button>
-                    <a-button icon circle aria-label="Enviar a pantalla 3" data-num="3" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>3</small></a-button>
-                    <a-button icon circle aria-label="Enviar a pantalla 4" data-num="4" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>4</small></a-button>
+                <div class="btns-share-screen" data-cod="${camera.cameraIndexCode}">
+                    <div class="p-relative" style="margin: 2px 0 0 4px;">
+                        <a-button icon circle aria-label="Enviar a pantalla 1" data-num="1" data-cod="${camera.cameraIndexCode}" info style="width: 1rem;"><small>1</small></a-button>
+                        <a-button icon circle aria-label="Enviar a pantalla 2" data-num="2" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>2</small></a-button>
+                        <a-button icon circle aria-label="Enviar a pantalla 3" data-num="3" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>3</small></a-button>
+                        <a-button icon circle aria-label="Enviar a pantalla 4" data-num="4" data-cod="${camera.cameraIndexCode}"  info style="width: 1rem;"><small>4</small></a-button>
+                    </div> 
                 </div>
                 <div id="stream-error-msg-${camera.cameraIndexCode}" class="stream-error-msg-container d-none">
                     <div class="stream-error protected-from-dark"><a-button icon circle warning><an-icon x size="1rem"></an-icon></a-button> Error del servidor de streaming</div>
@@ -532,7 +543,6 @@
                 isOnline,
                 isPlaying: false,
                 isMainStream: false,
-                captureRetry: false,
                 streamError: false,
                 playStopFnc: false,
             }
@@ -554,6 +564,9 @@
 
                     runFetch('/share_camera_alt', {
                         method: 'post',
+                        headers: {
+                            authorization: `Bearer ${configOptions.token}`
+                        },
                         body: JSON.stringify({
                             clientId: evt?.target?.dataset?.num,
                             streamUrl: camera.mainStream
@@ -561,6 +574,41 @@
                     });
                 });
             });
+
+            const takePictureWithThePlugin = (index = 0) => {
+                return new Promise((resolve) => {
+                    const picTimeout = setTimeout(() => {
+                        resolve('');
+                    }, 5000);
+
+                    try {
+                        jsDecoder.JS_CapturePicture(
+                            index,
+                            "",
+                            capturesFileExten.toUpperCase(),
+                            function (uint8Arr) {
+                                clearTimeout(picTimeout);
+
+                                let b64Str = uint8Arr.toBase64() || '';
+    
+                                if (! b64Str.startsWith(dataUriFileType)) { b64Str = `${dataUriFileType}${b64Str}`; }
+    
+                                return resolve(b64Str);
+                            }
+                        ).catch(() => {
+                            clearTimeout(picTimeout);
+
+                            resolve('');
+                        });
+                    } catch (err) {
+                        clearTimeout(picTimeout);
+
+                        console.log(err);
+                        
+                        return resolve('');
+                    }
+                });
+            }
             
             const imBusy = () => {
                 videoPlayerContainer.appendChild(preloader);
@@ -572,6 +620,8 @@
                 if (! vpStatus.isOnline) {
                     btnRefresh.remAttr = 'disabled';
                 } else {
+                    btnCapure.remAttr = 'disabled';
+
                     if (! vpStatus.isPlaying) {
                         btnPlay.remAttr = 'info';
 
@@ -586,8 +636,6 @@
                         if (btnPlay?.$el?.body) {
                             btnPlay.$el.body.innerHTML = '<span style="font-size: 1rem">⏹</span>';
                         }
-
-                        btnCapure.remAttr = 'disabled';
 
                         if (isPTZ) { btnPtz.remAttr = 'disabled'; }
 
@@ -610,17 +658,25 @@
                 preloader._remove();
             };
 
-            const takePicture = async (download = false) => {                
-                if (! vpStatus.isOnline) { return false; }
+            const takePicture = async (download = false) => {                               
+                if (! vpStatus.isOnline) {
+                    vpStatus.streamError = true;
+
+                    return false;
+                }
 
                 imBusy();
 
-                const timestamp = new Date().getTime();
-
                 let capturedPicture = '';
-    
-                if (! vpStatus.isPlaying) {
-                    if (! camera?.captureTimestamp || (timestamp - camera.captureTimestamp) > captureMinTimeBetweenUpdates) {
+                let isLocalPicture = false;
+
+                if (vpStatus.isPlaying) {
+                    capturedPicture = await takePictureWithThePlugin(camIndex);
+                    isLocalPicture = true;
+                }
+
+                if (! capturedPicture || 'data:,' == capturedPicture) {
+                    try {
                         const capture = await runFetch(endpoints.protected.capture, {
                             method: 'POST',
                             headers: {
@@ -629,70 +685,121 @@
                             body: JSON.stringify({id: camera.cameraIndexCode}),
                             timeout: 10000
                         });
-
+        
                         if (! isAllowed(capture)) {
                             stopLoop = true;
+                            vpStatus.streamError = true;
+
+                            imNotBusy();
         
                             return false;
                         }
 
-                        if (! capture?.data || capture?.data?.code) {
-                            vpStatus.streamError = true;
+                        capturedPicture = capture?.data || '';
 
-                            //showSnackbar(`Error al tomar foto remota en la cámara ${camera.cameraIndexCode}`, 'warning');
-                        } else {
-                            vpStatus.streamError = false;
-
-                            capturedPicture = capture.data;
-
-                            if ("image/jpeg" == capture?.headers?.['content-type']) {
-                                capturedPicture = URL.createObjectURL(capture.data);
-                            }
-                        }
-                    }
-                } else {
-                    const canvas = create('canvas');
-                    const context = canvas.getContext('2d');
-    
-                    canvas.width = videoPlayer.videoWidth;
-                    canvas.height = videoPlayer.videoHeight;
-                    context.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+                        /* if (capturedPicture && capturesMimeType == capture?.headers?.['content-type']) {                            
+                            capturedPicture = await new Promise((resolve) => {
+                                const reader = new FileReader();
                     
-                    capturedPicture = canvas.toDataURL('image/png');
+                                reader.readAsDataURL(capturedPicture);
+                                reader.onloadend = () => {
+                                    if (reader.error) {
+                                        return resolve('');
+                                    }
 
-                    if  (capturedPicture && 'data:,' == capturedPicture) {
-                        capturedPicture = canvasPlayer.toDataURL('image/png');
+                                    //return resolve(reader.result);
+                                    return resolve(reader.result.split(',')[1]);
+                                }
+                                reader.onerror = () => {
+                                    return resolve('');
+                                }
+                            });
+
+                            console.log(capturedPicture);
+                        } */
+                    } catch (err) {
+                        console.log(err);
                     }
+                }                
 
-                    if (download) {
-                        const link = create('a', {href: capturedPicture, download: `${camera.cameraIndexCode}_capture_${timestamp}.png`});
-    
-                        link.click();
+                if (! vpStatus.isPlaying && (! capturedPicture || 'data:,' == capturedPicture)) {
+                    await playStopStream(true, false);
+
+                    if (vpStatus.isPlaying) {
+                        capturedPicture = await takePictureWithThePlugin(camIndex);
+                        isLocalPicture = true;
+
+                        playStopStream(true, false);
                     }
                 }
 
                 if  (capturedPicture && 'data:,' != capturedPicture) {
+                    if (isLocalPicture) {
+                        runFetch(endpoints.protected.captureUpload, {
+                            method: 'POST',
+                            headers: {
+                                authorization: `Bearer ${configOptions.token}`
+                            },
+                            body: JSON.stringify({id: camera.cameraIndexCode, data: capturedPicture})
+                        });
+                    }
+
+                    const timestamp = new Date().getTime();
+
+                    if (capturedPicture?.length < 50) { console.log(capturedPicture); }
+
                     camera.capture = capturedPicture;
                     camera.captureTimestamp = timestamp;
                     dbRequest._put('cameras', camera);
 
                     videoPlayerContainer.style.backgroundImage = `url(${capturedPicture})`;
-                }
+
+                    if (download) {
+                        const link = create('a', {href: capturedPicture, download: `${camera.cameraIndexCode}_capture_${timestamp}.${capturesFileExten}`});
     
+                        link.click();
+                    }
+
+                    vpStatus.streamError = false;
+
+                    imNotBusy();
+
+                    return true;
+                }
+
+                vpStatus.streamError = true;
+
                 imNotBusy();
 
-                return true;
-            };
+                return false;
 
-            const playStopStream = async (isMainStream = false) => {
-                if (! vpStatus.isOnline) { return false; }
+                //20261113 Nota: Por alguna razón videoPlayer no es el elemento que contiene la reproducción sino canvasPlayer, por lo tanto para tomar la foto debo usarlo, o en su defecto tomar la foto de abmos elementos, comparar el tamaño y el de mas tamañ es la foto real, la otra sería una foto de un fondo en blanco
+                //20261113 Nota: Código respaldado
+                /* const canvas = create('canvas');
+                const context = canvas.getContext('2d');
+                
+                canvas.width = videoPlayer.width;
+                canvas.height = videoPlayer.height;
+                //canvas.width = screenSize.width;
+                //canvas.height = screenSize.height;
+                context.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
 
-                imBusy();
+                capturedPicture = canvas.toDataURL(capturesMimeType);
 
-                const stremUrl = ! isMainStream ? camera.subStream : camera.mainStream;
-    
-                if (! vpStatus.isPlaying) {
-                    await new Promise((resolve) => {
+                if  (! capturedPicture || 'data:,' == capturedPicture) {
+                    canvas.width = canvasPlayer.width;
+                    canvas.height = canvasPlayer.height;
+                    //canvas.width = screenSize.width;
+                    //canvas.height = screenSize.height;
+
+                    context.drawImage(canvasPlayer, 0, 0, canvas.width, canvas.height);
+
+                    capturedPicture = canvasPlayer.toDataURL(capturesMimeType);
+                } */
+
+                //20261114 intentaremos con await, así que comentamos el siguiente bloque
+                /* await new Promise((resolve) => {
+                    try {
                         jsDecoder.JS_Play(stremUrl, {
                             playURL: stremUrl,
                             auth: '',
@@ -713,33 +820,105 @@
 
                             return resolve(false);
                         });
-                    });
+                    } catch (err) {
+                        console.log(err);
+
+                        vpStatus.streamError = true;
+                        
+                        showSnackbar(`No se pudo inicar la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
+
+                        return resolve(false);
+                    }
+                }); */
+            };
+
+            const playStopStream = async (isMainStream = false, takePictureOnStop = true) => {
+                if (! vpStatus.isOnline) {
+                    vpStatus.streamError = true;
+
+                    return false;
+                }
+
+                imBusy();
+
+                const stremUrl = ! isMainStream ? camera.subStream : camera.mainStream;
+    
+                if (! vpStatus.isPlaying) {
+                    try {
+                        await jsDecoder.JS_Play(stremUrl, {
+                            playURL: stremUrl,
+                            auth: '',
+                            mode: 'media',
+                            token: '',
+                        }, camIndex);
+
+                        //console.log(`Transmisión de la cámara ${camIndex} (${camera.cameraIndexCode}) iniciada satisfactoriamente`);
+
+                        vpStatus.isPlaying = true;
+                        vpStatus.isMainStream = isMainStream;
+                        vpStatus.streamError = false;
+
+                        imNotBusy();
+
+                        return true;
+                    } catch (err) {
+                        console.log(err);
+
+                        showSnackbar(`No se pudo inicar la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
+
+                        vpStatus.streamError = true;
+
+                        imNotBusy();
+
+                        return false;
+                    }
                 } else {
-                    imNotBusy();
+                    if (takePictureOnStop) { await takePicture(); }
+                    try {
+                        jsDecoder.JS_Stop(camIndex);
+                        
+                        //console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
 
-                    await takePicture();
+                        vpStatus.isPlaying = false;
+                        vpStatus.isMainStream = false;
 
-                    imBusy();
+                        imNotBusy();
 
-                    await new Promise((resolve) => {
-                        jsDecoder.JS_Stop(camIndex).then(() => {
-                            //console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
+                        return true;
+                    } catch (err) {
+                        console.log(err);
+                        
+                        showSnackbar(`Error al detener la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
 
-                            vpStatus.isPlaying = false;
-                            vpStatus.isMainStream = false;
+                        imNotBusy();
 
-                            return resolve(true);
-                        }, () => {
+                        return false;
+                    }
+
+                    //20261114 Código respaldado
+                    /* await new Promise((resolve) => {
+                        try {
+                            jsDecoder.JS_Stop(camIndex).then(() => {
+                                //console.log(`Transmisión de cámara ${camIndex} (${camera.cameraIndexCode}) detenida satisfactoriamente`);
+    
+                                vpStatus.isPlaying = false;
+                                vpStatus.isMainStream = false;
+    
+                                return resolve(true);
+                            }, () => {
+                                showSnackbar(`Error al detener la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
+    
+                                return resolve(false);
+                            });
+                        } catch (err) {
+                            console.log(err);
+                            
                             showSnackbar(`Error al detener la transmisión de la cámara ${camIndex} (${camera.cameraIndexCode})`, 'warning');
 
                             return resolve(false);
-                        });
-                    });
+                        }
+                    }); */
                 }
-
-                imNotBusy();
-
-                return true;
             }
 
             const enterFullscreen = (evt) => {
@@ -751,7 +930,7 @@
 
                         //Fijamos el tamaño de la pantalla completa asumiendo que el aspec ratio es 16/9
                         canvasPlayer.width = screenSize.width;
-                        canvasPlayer.height = screenSize.width / (16/9);
+                        canvasPlayer.height = screenSize.height;
                     }
                 } else {
                     exitFullscreenFnc();
@@ -824,19 +1003,23 @@
                     timeout: 10000
                 });
 
-                imNotBusy();
-
                 if (! isAllowed(cameraCheck)) {
                     window.location.reload(true);
 
                     return;
                 }
 
-                if (cameraCheck?.data?.length & 1 == cameraCheck?.data?.status) {
+                if (cameraCheck?.data?.status && 1 == cameraCheck?.data?.status) {
                     vpStatus.isOnline = true;
+                    vpStatus.streamError = false;
 
                     takePicture();
+                } else {
+                    vpStatus.isOnline = false;
+                    vpStatus.streamError = true;
                 }
+
+                imNotBusy();
             });
             
             imNotBusy();//Activamos los botones necesarios
@@ -851,19 +1034,9 @@
                 vpStatus.playStopFnc = playStopStream;
 
                 if (! camera?.captureTimestamp) {
-                    (async () => {
-                        //console.log(`Tomando foto remota a la cámara ${camIndex} (${camera.cameraIndexCode})`);
+                    //console.log(`Tomando foto remota a la cámara ${camIndex} (${camera.cameraIndexCode})`);
     
-                        await takePicture();
-    
-                        if (! camera?.captureTimestamp && ! vpStatus.captureRetry) {
-                            takePicture();
-    
-                            vpStatus.captureRetry = true;
-
-                            //console.log(`Intentaremos tomar la foto remota de nuevo a la cámara ${camIndex} (${camera.cameraIndexCode})`);
-                        }
-                    })();
+                    await takePicture();
                 }
             }
 
@@ -1012,9 +1185,32 @@
         await createGrid();
 
         createPagination();
+
         enableForm(toolsForm);
         enableForm(filtersDialog.$el['filters-form']);
     }
+
+    //Conserva las capturas cacheadas antes de vaciar el almacén.
+    //Se cruzan por cameraIndexCode, no por posición, así que un cambio de orden en
+    //la respuesta de HikCentral no asigna una foto a otra cámara.
+    const mergeCachedCaptures = (remoteCameras = [], localCameras = []) => {
+        const localCaptures = new Map((localCameras || [])
+            .filter((c) => c?.cameraIndexCode)
+            .map((c) => [c.cameraIndexCode, c]));
+
+        (remoteCameras || []).forEach((camera) => {
+            if (! camera?.cameraIndexCode) { return; }
+
+            const cached = localCaptures.get(camera.cameraIndexCode);
+
+            if (cached?.capture && cached?.captureTimestamp) {
+                camera.capture = cached.capture;
+                camera.captureTimestamp = cached.captureTimestamp;
+            }
+        });
+
+        return remoteCameras;
+    };
 
     const runSetup = async () => {
         dataObj.local = await dbRequest._getAll('cameras');
@@ -1047,24 +1243,11 @@
                 const localDbUpdates = [];
                 
                 if (dataObj.local?.length) {
-                    const localDbCaptures = [];
-        
-                    dataObj.remote.forEach((f) => {
-                        localDbCaptures.push(dbRequest._get('cameras', {index: 'cameraIndexCode', value: f.cameraIndexCode}));
-                    });
-        
-                    if (localDbCaptures?.length) {
-                        await Promise.all(localDbCaptures);
-            
-                        localDbCaptures.forEach((c, i) => {
-                            if (c.capture && c.captureTimestamp) {
-                                dataObj.remote[i].capture = c.capture;
-                                dataObj.remote[i].captureTimestamp = c.captureTimestamp;
-                            }
-                        });
-                    }
-        
-                    await dbRequest._clear('cameras');    
+                    //Una sola lectura (_getAll en la línea inicial) basta: no se hace
+                    //una consulta por cámara ni se itera un arreglo de promesas.
+                    mergeCachedCaptures(dataObj.remote, dataObj.local);
+
+                    await dbRequest._clear('cameras');
                 }
         
                 dataObj.remote.forEach((c, i) => {
@@ -1180,9 +1363,17 @@
         return true;
     }
 
-    const eventSource = new EventSource(`/sse_events?clientId=${configOptions.clientId}`);
+    let eventSource = null;
 
-    eventSource.addEventListener("message", (e) => {
+    const connectEventSource = () => {
+        if (! configOptions.token) { return; }
+
+        if (eventSource) { eventSource.close(); }
+
+        //EventSource no permite headers: el JWT viaja en el query (solo para esta conexión SSE)
+        eventSource = new EventSource(`/sse_events?clientId=${encodeURIComponent(configOptions.clientId)}&token=${encodeURIComponent(configOptions.token)}`);
+
+        eventSource.addEventListener("message", (e) => {
         let response = {};
         
         try {
@@ -1236,9 +1427,10 @@
         }
     });
 
-    eventSource.addEventListener("error", (e) => {
-        console.log('Error de conexión - reconectando', e);
-    });
+        eventSource.addEventListener("error", (e) => {
+            console.log('Error de conexión - reconectando', e);
+        });
+    };
 
     //Solo para PCs
     if (maxWidth > 640) {
@@ -1267,6 +1459,7 @@
             configOptions.tokenExpiresIn = response.data.expiresIn;
             configOptions.tokenCreatedAt = response.data.timestamp;
             saveConfig();
+            connectEventSource();
 
             loginDialog.setAttr = {state: 'inactive'};
 
@@ -1428,7 +1621,7 @@
             //Si hay promesas por cumplir y estas suman una fila del grid o es la última fila del grid, esperamos las promesas
             if (playersPromises.length && (! (i % configOptions.gridSize) || i == playerEntries.length - 1)) {
                 //Vamos a comentar esta línea para comparar entre el inicio de todos los streams y el inicio de todos los streams con la nueva estrategia
-                //await Promise.all(playersPromises);
+                //await Promise.allSettled(playersPromises);
 
                 playersPromises = [];
             }
@@ -1470,6 +1663,9 @@
 
             runFetch('/share_camera', {
                 method: 'post',
+                headers: {
+                    authorization: `Bearer ${configOptions.token}`
+                },
                 body: JSON.stringify({
                     clientId: configOptions.clientId,
                     screenId: screenNum,
@@ -1503,6 +1699,8 @@
 
         return;
     }
+
+    connectEventSource();
     
     if (await runSetup()) {
         await reCreateGrid();

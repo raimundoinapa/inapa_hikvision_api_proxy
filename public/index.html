@@ -122,6 +122,7 @@
                 .video-controls,
                 .camera-status-container,
                 .camera-name-container,
+                .btns-share-screen,
                 .stream-error-msg-container {
                     position: absolute;
                     overflow: visible;
@@ -134,7 +135,11 @@
                         0 0 5px var(--text-color-1), 
                         0 0 5px var(--text-color-1);
                 }
-                
+                .btns-share-screen {
+                    width: 100%;
+                    padding: 0;
+                }
+
                 .refresh-btn-container {
                     position: absolute;
                     top: 10px;
@@ -171,6 +176,8 @@
                     z-index: 999;
                 }
                     .camera-name-container .small { font-size: 0.7rem; }
+
+                .btns-share-screen { z-index: 1000; }
                 
                 .stream-error-msg-container {
                     top: calc(50% - 1rem);

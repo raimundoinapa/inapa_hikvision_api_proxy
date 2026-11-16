@@ -159,7 +159,11 @@
         }
 
         const clientSelectBox = select('[name="client-select"]');
-        const eventSource = new EventSource('/sse_events?isScreen=true');
+        //Clave de pantalla: /screen?key=... (se reenvía a los endpoints de pantalla)
+        const screenKey = new URLSearchParams(window.location.search).get('key') || '';
+        const screenKeyQuery = screenKey ? `&key=${encodeURIComponent(screenKey)}` : '';
+        const screenKeyParam = screenKey ? `?key=${encodeURIComponent(screenKey)}` : '';
+        const eventSource = new EventSource(`/sse_events?isScreen=true${screenKeyQuery}`);
         let screenId = 0;
 
         eventSource.addEventListener("message", async (e) => {
@@ -227,7 +231,7 @@
             });
         }
 
-        const clientIds = await runFetch('/get_clients', {method: 'get'});
+        const clientIds = await runFetch(`/get_clients${screenKeyParam}`, {method: 'get'});
 
         if (clientIds?.data?.length) {
             clientIds.data.forEach((f) => {
@@ -238,7 +242,7 @@
         clientSelectBox._on('change', async (evt) => {
             if (! clientSelectBox.value) { return false; }
 
-            const clientConnect = await runFetch('/connect_client', {method: 'post', body: JSON.stringify({clientId: clientSelectBox.value, screenId})});
+            const clientConnect = await runFetch(`/connect_client${screenKeyParam}`, {method: 'post', body: JSON.stringify({clientId: clientSelectBox.value, screenId})});
 
             if (! clientConnect?.ok) {
                 showSnackbar(clientConnect?.data?.message || 'Error', 'warning');

@@ -43,10 +43,14 @@
     (async () => {
         const {app, q, select, create, sleep, runFetch, dbExists, dbStart, getISO8601Timestamp, enableForm, disableForm} = __CPLIB__;
 
-        let screenNum = window.location.href.split('pantalla')?.[1] || 1;
+        //El número sale del path (/pantalla1). La clave (?key=) es opcional y se
+        //conserva solo por compatibilidad si más adelante se vuelve a exigir.
+        const pathMatch = /pantalla([1-4])/i.exec(window.location.pathname);
+        let screenNum = pathMatch ? pathMatch[1] : '1';
+        const screenKey = new URLSearchParams(window.location.search).get('key') || '';
         let currenStream = '';
 
-        if (! /^[1-4]$/.test(screenNum)) { screenNum = 1; }
+        if (! /^[1-4]$/.test(screenNum)) { screenNum = '1'; }
 
         document.title = `Pantalla ${screenNum}`;
         //q('h1').innerText = `Pantalla ${screenNum}`;
@@ -156,7 +160,7 @@
             addDblTapListener(videoPlayerContainer, jsDecoderFullscreen);
         }
 
-        const eventSource = new EventSource(`/connect_client_alt?clientId=${screenNum}`);
+        const eventSource = new EventSource(`/connect_client_alt?clientId=${screenNum}${screenKey ? `&key=${encodeURIComponent(screenKey)}` : ''}`);
 
         eventSource.addEventListener("message", async (e) => {
             let response = {};

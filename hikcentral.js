@@ -8,12 +8,9 @@
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
 
-    const apiServerUrl = nodeEnv?.env?.HIKVISION_API_URL || 'https://172.30.4.200';
-    const partnerKey = nodeEnv?.env?.HIKVISION_PARTNER_KEY || '25446123';
-    const partnerSecret = nodeEnv?.env?.HIKVISION_PARTNER_SECRET || 'JoA8ewu3t3BzKFRZgT0J';
-    /*const apiServerUrl = nodeEnv.env?.HIKVISION_API_URL || 'https://172.20.2.99';
-    const partnerKey = nodeEnv?.env?.HIKVISION_PARTNER_KEY || '23827199';
-    const partnerSecret = nodeEnv?.env?.HIKVISION_PARTNER_SECRET || 'nFoLQWdyyf5WeRCEUEZr';*/
+    const apiServerUrl = nodeEnv?.env?.HIKVISION_API_URL;
+    const partnerKey = nodeEnv?.env?.HIKVISION_PARTNER_KEY;
+    const partnerSecret = nodeEnv?.env?.HIKVISION_PARTNER_SECRET;
     const pageSize = 500;
     const maxSimultaneousStreams = 16;
     const endpoints = {
@@ -240,6 +237,10 @@
     }
 	
 	const setParams = async () => {
+        if (! apiServerUrl || ! partnerKey || ! partnerSecret) {
+            throw new Error('Faltan variables de entorno: HIKVISION_API_URL, HIKVISION_PARTNER_KEY y/o HIKVISION_PARTNER_SECRET');
+        }
+
         const paramsKeys = Object.keys(params);
 
         for (let i = 0; i < paramsKeys.length; i++) {
@@ -592,21 +593,45 @@
         const mainStreamUrls = previewURLsResults?.[0]?.data?.list;
         const subStreamUrls = previewURLsResults?.[1]?.data?.list;
 
-        if (mainStreamUrls?.length) {
-            mainStreamUrls.forEach((m, i) => {
-                urlsDataObj[indexCodes[i].toString()] = {mainStream: m?.url || ''};
-            });   
+        //HikCentral no incluye el cameraIndexCode en cada elemento de la respuesta
+        //(solo devuelve url y authentication), así que la única forma de asociar una
+        //URL con una cámara es la posición en el arreglo. Si la cantidad no coincide,
+        //no se puede saber qué cámara falta: asignar por posición dejaría a cada cámara
+        //con el stream de la siguiente. En ese caso se falla explícitamente en vez de
+        //mostrar video de otra cámara.
+        const expectedCount = indexCodes.length;
+        const mainStreamComplete = Array.isArray(mainStreamUrls) && mainStreamUrls.length === expectedCount;
+        const subStreamComplete = Array.isArray(subStreamUrls) && subStreamUrls.length === expectedCount;
+
+        if (Array.isArray(mainStreamUrls) && mainStreamUrls.length && ! mainStreamComplete) {
+            return {
+                ...previewURLsResults[0],
+                status: 'fail',
+                ok: false,
+                data: {
+                    code: 'previewURLs/mismatch',
+                    msg: `HikCentral devolvió ${mainStreamUrls.length} URLs de stream principal para ${expectedCount} cámaras; no se asignan para evitar streams cruzados`
+                }
+            };
         }
 
-        if (subStreamUrls?.length) {
-            subStreamUrls.forEach((m, i) => {
-                if (urlsDataObj[indexCodes[i].toString()] && Object.keys(urlsDataObj[indexCodes[i].toString()])) {
-                    urlsDataObj[indexCodes[i].toString()]['subStream'] = m?.url || '';
-                }
+        if (mainStreamComplete) {
+            mainStreamUrls.forEach((m, i) => {
+                urlsDataObj[indexCodes[i].toString()] = {mainStream: m?.url || ''};
             });
         }
 
-        if (mainStreamUrls?.length) {
+        //El sub-stream solo se asigna si también llegó completo: si faltara uno, la
+        //posición correría y cada cámara recibiría el sub-stream de otra.
+        if (mainStreamComplete && subStreamComplete) {
+            subStreamUrls.forEach((m, i) => {
+                const key = indexCodes[i].toString();
+
+                if (urlsDataObj[key]) { urlsDataObj[key].subStream = m?.url || ''; }
+            });
+        }
+
+        if (mainStreamComplete) {
             previewURLsResults[0].data.list = urlsDataObj;
         }
 
@@ -1117,11 +1142,10 @@
         const cameraIndexCodesArr = [];
 
         if (camerasList?.length) {
-            const cameraPromises = camerasList.map(async (c) => {
-                const cameraIndexCode = c.cameraIndexCode;
-
+            //Los datos de encoder/área se resuelven en memoria: no hay I/O que limitar.
+            camerasList.forEach((c) => {
                 //We fill the array with cameraIndexCodes to get the preview URLs later
-                cameraIndexCodesArr.push(cameraIndexCode);
+                cameraIndexCodesArr.push(c.cameraIndexCode);
 
                 if (encodeDevices?.data?.list?.length) {
                     c.encodeDeviceInfo = encodeDevices.data.list.find(f => f?.encodeDevIndexCode && c?.encodeDevIndexCode && f.encodeDevIndexCode == c.encodeDevIndexCode) || {};
@@ -1130,21 +1154,42 @@
                 if (areas?.data?.list?.length) {
                     c.area = areas.data.list.find(f => f?.indexCode && c?.regionIndexCode && f.indexCode == c.regionIndexCode) || {};
                 }
-
-                if (c?.capabilitySet?.includes('ptz')) {
-                    const [presets, patrols] = await Promise.all([
-                        getPTZPresets(cameraIndexCode),
-                        getPTZPatrols(cameraIndexCode)
-                    ]);
-
-                    c.presets = presets?.data?.list || [];
-                    c.patrols = patrols?.data?.list || [];
-                }
-
-                return c;
             });
 
-            await Promise.all(cameraPromises);
+            //Los presets/patrullas de PTZ son 2 llamadas HTTP por cámara. Antes se
+            //lanzaban todas a la vez (N cámaras PTZ = 2N requests simultáneos), lo que
+            //podía saturar HikCentral. Ahora se procesan con concurrencia limitada.
+            const ptzCameras = camerasList.filter((c) => c?.capabilitySet?.includes('ptz'));
+            const ptzWorkers = Math.max(1, Math.min(
+                Number(process.env.PTZ_MAX_CONCURRENCY) || 4,
+                ptzCameras.length
+            ));
+            let ptzNext = 0;
+
+            const ptzWorker = async () => {
+                while (ptzNext < ptzCameras.length) {
+                    //Cada worker toma la siguiente cámara; el índice avanza de forma
+                    //síncrona, así que dos workers nunca procesan la misma cámara.
+                    const ptzCamera = ptzCameras[ptzNext++];
+
+                    try {
+                        const [presets, patrols] = await Promise.all([
+                            getPTZPresets(ptzCamera.cameraIndexCode),
+                            getPTZPatrols(ptzCamera.cameraIndexCode)
+                        ]);
+
+                        ptzCamera.presets = presets?.data?.list || [];
+                        ptzCamera.patrols = patrols?.data?.list || [];
+                    } catch (err) {
+                        ptzCamera.presets = [];
+                        ptzCamera.patrols = [];
+                    }
+                }
+            };
+
+            if (ptzCameras.length) {
+                await Promise.all(Array.from({length: ptzWorkers}, ptzWorker));
+            }
 
             const previewURLs = await getCamerasPreviewURLs(cameraIndexCodesArr.join(','), protocol, false);
 
@@ -1313,7 +1358,16 @@
         return cameras;
     }
     
-    const getIntegralSingleCameraData = async (indexCode = '', protocol = '') => {
+    const getIntegralSingleCameraData = async (indexCode = '', protocol = 'websocket') => {
+        const protocols = ['rtsp', 'websocket', 'rtsp_s', 'websocket_s', 'hls', 'rtmp'];
+
+        if (! protocol || 'string' != typeof protocol || ! protocol.trim() || ! protocols.includes(protocol.toLowerCase())) {
+            return {
+                status: 'fail',
+                data: 'Invalid protocol'
+            };
+        }
+
 		const camera = await getCamera(indexCode);
 		
 		if (camera?.data?.encodeDevIndexCode) {
@@ -1329,7 +1383,7 @@
 		}
 		
 		if (camera?.data?.cameraIndexCode) {
-			const urlData = await getCameraPreviewURL(camera.data.cameraIndexCode);
+			const urlData = await getCameraPreviewURL(camera.data.cameraIndexCode, protocol);
 			
 			camera.data.mainStream = urlData?.data?.mainStream || '';
             camera.data.subStream = urlData?.data?.subStream || '';

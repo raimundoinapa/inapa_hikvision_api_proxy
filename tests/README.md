@@ -12,6 +12,7 @@ Desde la raíz del proyecto:
 node tests\auth-gaps.test.js
 node tests\group-check.test.js
 node tests\rate-limit.test.js
+node tests\path-traversal.test.js
 node tests\capture-refresh.test.js
 node tests\capture-upload.test.js
 node tests\capture-merge.test.js
@@ -23,8 +24,10 @@ Cada suite imprime una tabla y termina con `ALL CHECKS PASSED` o `FAILURES: n`.
 
 ## Notas
 
-- `auth-gaps` (3445), `group-check` (3444) y `rate-limit` (3446) levantan servidores
-  de prueba en puertos propios y usan credenciales ficticias.
+- `auth-gaps` (3445), `group-check` (3444), `rate-limit` (3446) y `path-traversal`
+  (3501) levantan servidores de prueba en puertos propios y usan credenciales
+  ficticias. `path-traversal` envía peticiones crudas por socket con un señuelo
+  fuera de `public/`; verifica `../`, `%2e%2e`, `%252e`, `%5c` y barras mixtas.
 - Por decisión operativa del 15/11/2026, `/pantalla1..4`, `/pantalla.html` y
   `/connect_client_alt` no piden clave. `auth-gaps` lo verifica y comprueba que
   `/screen`, `/get_clients`, `/connect_client`, `/share_camera*` y `/sse_events`

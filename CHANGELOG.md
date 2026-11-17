@@ -46,18 +46,21 @@ Resultado de las suites: **#4 40/40, #5 7/7, #6 11/11, #7 25/25, #8 17/17,
 
 ## #1 — Path traversal en archivos estáticos
 
-**Síntoma.** Una petición con `..` codificado podía salir de `public/` y leer
-archivos del proyecto, incluido `.env` o la llave TLS.
+**Síntoma.** Una petición con `..` podía salir de `public/` y leer archivos del
+proyecto, incluido `.env` o la llave TLS. También había que comprobar las formas
+codificadas (`%2e%2e`, `%252e`, `%2f`, `%5c`), porque son la forma habitual de
+intentar colar el mismo ataque.
 
 **Causa.** El servidor construía la ruta con `path.join(public, req._url)` y luego
 hacía `fs.readFile(req._filePath)` sin comprobar que el resultado siguiera dentro de
 `public/`. `path.join` normaliza `..`, así que la cadena final ya apuntaba fuera de
 la carpeta permitida.
 
-**Cambio.** En `http-server.js:296-302`, después de resolver la ruta:
+**Cambio.** En `http-server.js:294-310`, después de resolver la ruta:
 
 ```js
-if (req._filePath !== this.public && ! req._filePath.startsWith(this.public + path.sep)) {
+const relativePath = path.relative(this.public, req._filePath);
+if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
     res.writeHead(404, {'Content-Type': 'text/html'});
     res.end('404: File not found');
 
@@ -67,21 +70,40 @@ if (req._filePath !== this.public && ! req._filePath.startsWith(this.public + pa
 
 No se “limpian” los `../` de la cadena: se resuelve la ruta y se comprueba que el
 resultado esté contenido en la carpeta pública. Es una lista blanca, no una lista
-negra.
+negra. `path.relative` evita además comparar prefijos de texto y detecta unidades o
+UNC distintas en Windows.
 
-**Prueba (servidor real).**
+**Sobre las codificaciones (punto que conviene dejar explícito).** Node entrega
+`req.url` tal como llegó: **no** decodifica `%2e%2e`, `%252e`, `%2f` ni `%5c`. Por
+tanto `path.join` los trata como nombres de archivo literales dentro de `public/` y
+la lectura falla; no hay un “descodificador” posterior que pueda convertirlos en
+`../`. Si delante hubiera un proxy que **sí** decodifica, entonces el `../` llega
+literal, `path.join` lo resuelve y la comprobación `path.relative` lo rechaza. Las
+dos situaciones quedan cubiertas sin mantener una lista negra de codificaciones.
 
-| Ruta solicitada | Resultado |
-|---|---|
-| `/index.html` | 200 |
-| `/server.js` | 404 |
-| `/..%2f..%2fserver.js` | 404 |
-| `/%2e%2e/%2e%2e/server.js` | 404 |
-| `/%2e%2e%2f%2e%2e%2f.env` | 404 |
-| `/..%5c..%5cssl%5cserver.key` | 404 |
-| `/js/../../../server.js` | 404 |
+**Prueba.** La suite `tests/path-traversal.test.js` levanta un `HttpServer` real con
+un archivo señuelo **fuera** de `public/` y envía peticiones HTTP crudas por socket,
+para que el cliente no normalice la ruta. Resultado: **23/23 comprobaciones**, con
+el archivo permitido en 200 y ningún señuelo leído.
 
-**Lección.** Para rutas de archivos, comparar rutas ya resueltas y fallar cerrado.
+| Ruta solicitada | Resultado | ¿Leyó el señuelo? |
+|---|---|---|
+| `/allowed.txt` | 200 | no aplica |
+| `/../secret-canary.txt` | 404 | no |
+| `/%2e%2e/secret-canary.txt` | 404 | no |
+| `/%2e%2e%2fsecret-canary.txt` | 404 | no |
+| `/..%2fsecret-canary.txt` | 404 | no |
+| `/%2e%2e/%2e%2e/secret-canary.txt` | 404 | no |
+| `/%252e%252e%252fsecret-canary.txt` | 404 | no |
+| `/..%5csecret-canary.txt` | 404 | no |
+| `/%2e%2e%5csecret-canary.txt` | 404 | no |
+| `/js/../../../secret-canary.txt` | 404 | no |
+| `/..\\secret-canary.txt` | 404 | no |
+| `/....//secret-canary.txt` | 404 | no |
+
+**Lección.** No decodificar es parte de la defensa, pero no conviene confiar solo en
+ello: la comprobación se hace sobre la ruta **resuelta**, no sobre el texto, y cubre
+también lo que un proxy intermedio pueda decodificar antes de llegar al servidor.
 Los filtros de texto se saltan con codificaciones y con separadores de Windows.
 
 ---

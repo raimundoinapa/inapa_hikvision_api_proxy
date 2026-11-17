@@ -293,8 +293,15 @@ class httpServer {
             req._isBackendRequest = req._isPost || Object.keys(req._qsEntries);
             req._filePath = path.join(this.public, req._url);
 
-            //Rechaza rutas que escapen de la carpeta pública (path traversal)
-            if (req._filePath !== this.public && ! req._filePath.startsWith(this.public + path.sep)) {
+            //Rechaza rutas que escapen de la carpeta pública (path traversal).
+            //Se compara la ruta ya resuelta, no el texto: path.join no decodifica
+            //%2e%2e, %252e, %5c, etc., así que esos bytes son nombres de archivo
+            //literales dentro de public/. Si un proxy los decodifica antes de
+            //llegar aquí, path.join resuelve los ../ y esta comprobación sigue
+            //fallando cerrado. path.relative evita además comparar prefijos de texto
+            //y detecta unidades/UNC distintas en Windows.
+            const relativePath = path.relative(this.public, req._filePath);
+            if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
                 res.writeHead(404, {'Content-Type': 'text/html'});
                 res.end('404: File not found');
 
